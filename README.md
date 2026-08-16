@@ -36,6 +36,7 @@ G-coder is not just a chat tool; it's a complete software engineering lifecycle 
 - **🧠 Dynamic Model Registry:** OpenAI, Groq, and OpenRouter catalogs are refreshed at runtime, ranked for heavyweight coding, cached securely, and backed by offline-safe defaults.
 - **⬆️ Verified Self-Updates:** `g-coder update` verifies npm package identity and semantic versions before performing a shell-free global update.
 - **🛡️ Deterministic Deep Audit:** The entire workspace is checked for exposed secrets, unmasked input, unsafe commands, network timeouts, rejection gaps, and incomplete provider routing; `--fix` rolls back edits unless the build passes.
+- **🧰 Autonomous Environment Manager:** Project manifests are detected across Node.js, Python, Android/Gradle, Rust, Go, Ruby, PHP, and iOS projects; missing runtimes and packages can be installed interactively before the original workflow resumes.
 
 ---
 
@@ -102,7 +103,38 @@ g-coder update --check   # Check the trusted npm release without installing
 g-coder update           # Safely install the verified latest global release
 g-coder audit            # Offline deterministic whole-workspace diagnostics
 g-coder audit --fix      # Generate guarded patches and keep them only if build passes
+g-coder env              # Report missing runtimes and project packages
+g-coder env --setup      # Prompt, install, verify, and resume automatically
 ```
+
+### Runtime and dependency automation
+
+`g-coder create`, `g-coder run`, and `g-coder batch` automatically audit the workspace before execution and again before build verification. Installations are never performed without an explicit `y` or `yes`; pressing Enter defaults to No. System installers are invoked without a shell using the host's supported package manager:
+
+- Linux: `apt-get`, `dnf`, or `pacman` (with non-interactive `sudo -n` when required)
+- macOS: Homebrew
+- Windows: WinGet, with Chocolatey as a fallback
+
+Project packages use their native manager (`npm install`, an isolated Python `.venv`, `cargo fetch`, `go mod download`, `bundle install`, or `composer install`). Custom required binaries can be declared without arbitrary shell commands:
+
+```json
+{
+  "tools": [
+    {
+      "name": "protoc",
+      "command": "protoc",
+      "versionArgs": ["--version"],
+      "packages": {
+        "linux": "protobuf-compiler",
+        "darwin": "protobuf",
+        "win32": "Google.Protobuf"
+      }
+    }
+  ]
+}
+```
+
+Save this manifest as `.g-coder-env.json` in the workspace root. Names, commands, and system-package identifiers receive strict validation and are passed as process arguments rather than interpolated shell strings.
 
 - This wizard will prompt you interactively for your API keys.
 - The keys are securely written to a hidden global directory on your machine (`~/.g-coder/.env`).

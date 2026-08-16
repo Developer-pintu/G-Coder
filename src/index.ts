@@ -24,6 +24,7 @@ import { ProjectAuditor } from './core/auditor';
 import { PromptEnhancer } from './core/promptEnhancer';
 import { StateManager } from './core/stateManager';
 import { Updater } from './core/updater';
+import { EnvironmentManager } from './core/envManager';
 
 // 1. Load local .env (takes precedence)
 dotenv.config();
@@ -80,6 +81,28 @@ program
   .option('--force', 'Reinstall the latest verified release')
   .action(async (options) => {
       await new Updater(CLI_VERSION).update({ checkOnly: options.check, force: options.force });
+  });
+
+// Command: Environment Audit/Setup
+program
+  .command('env')
+  .description('Audit runtimes and project dependencies for the current workspace')
+  .option('--setup', 'Prompt to install missing runtimes and project packages')
+  .action(async (options) => {
+      const manager = new EnvironmentManager();
+      if (options.setup) {
+          await manager.ensure(process.cwd());
+          return;
+      }
+      const report = manager.audit(process.cwd());
+      console.log(chalk.cyan.bold(`\n🔎 Environment audit: ${report.detectedFiles.length} project manifests detected`));
+      if (report.missingTools.length === 0 && report.pendingDependencies.length === 0) {
+          console.log(chalk.green('✅ All detected prerequisites are ready.'));
+          return;
+      }
+      report.missingTools.forEach(tool => console.log(chalk.yellow(`  Missing runtime: ${tool.displayName} (${tool.reason})`)));
+      report.pendingDependencies.forEach(dependency => console.log(chalk.yellow(`  Pending packages: ${dependency.displayName}`)));
+      console.log(chalk.gray('Run `g-coder env --setup` to install interactively.'));
   });
 
 // Command: Create (Zero-Knowledge Project Generator)
@@ -290,6 +313,9 @@ program
               stateManager.fail('Execution plan was rejected by the user.');
               process.exit(0);
           }
+
+          const environment = new EnvironmentManager();
+          await environment.ensure(process.cwd());
 
           // 2. Git Checkpoint Phase
           gitGuard.checkpoint();

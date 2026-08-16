@@ -8,6 +8,7 @@ import { GitGuard } from './gitGuard';
 import { SelfHealer } from './selfHealer';
 import { PromptEnhancer } from './promptEnhancer';
 import { StateManager } from './stateManager';
+import { EnvironmentManager } from './envManager';
 
 export class BatchEditor {
     private engine: SystemAgent;
@@ -47,6 +48,14 @@ export class BatchEditor {
         // 1. Plan Phase
         const isPlanApproved = await this.planner.createAndConfirmPlan(fullInstruction, providerOpt);
         if (!isPlanApproved) return;
+
+        const environment = new EnvironmentManager();
+        try {
+            await environment.ensure(process.cwd());
+        } catch (error: any) {
+            stateManager.fail(`Environment setup failed: ${error.message}`);
+            throw error;
+        }
 
         // 2. Git Checkpoint Phase
         this.gitGuard.checkpoint();

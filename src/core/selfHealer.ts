@@ -3,6 +3,7 @@ import chalk from 'chalk';
 import ora from 'ora';
 import { executeAiRequest, buildAiPrompt } from './api';
 import { SystemAgent } from './agentEngine';
+import { EnvironmentManager } from './envManager';
 
 export class SelfHealer {
     private engine: SystemAgent;
@@ -13,6 +14,12 @@ export class SelfHealer {
     }
 
     public async verifyAndHeal(providerOpt: string, buildCommand: string = 'npm run build'): Promise<boolean> {
+        try {
+            await new EnvironmentManager().ensure(process.cwd());
+        } catch (error: any) {
+            console.log(chalk.red(`Environment preparation failed: ${error.message}`));
+            return false;
+        }
         let attempts = 0;
 
         while (attempts < this.maxRetries) {

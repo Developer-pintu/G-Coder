@@ -2,13 +2,13 @@ import chalk from 'chalk';
 import inquirer from 'inquirer';
 import fse from 'fs-extra';
 import path from 'path';
-import cp from 'child_process';
 import ora from 'ora';
 import { executeAiRequest, buildAiPrompt } from './api';
 import { confirmAction } from './utils';
 import { PreviewEngine } from './previewEngine';
 import { PromptEnhancer } from './promptEnhancer';
 import { StateManager } from './stateManager';
+import { EnvironmentManager } from './envManager';
 
 export interface BlueprintFile {
     path: string;
@@ -74,16 +74,12 @@ export class ProjectCreator {
 
         await Promise.all(generatePromises);
 
-        // 4. Dependency Setup
-        const packageJsonPath = path.join(outDir, 'package.json');
-        if (fse.existsSync(packageJsonPath)) {
-            console.log(chalk.cyan.bold(`\n📦 Installing Dependencies...`));
-            try {
-                cp.execSync('npm install', { cwd: outDir, stdio: 'inherit' });
-                console.log(chalk.green(`✔ Dependencies installed successfully.`));
-            } catch (err: any) {
-                console.log(chalk.red(`\n✖ npm install failed. You may need to run it manually.`));
-            }
+        // 4. Cross-platform Runtime & Dependency Setup
+        try {
+            await new EnvironmentManager().ensure(outDir);
+        } catch (error: any) {
+            stateManager.fail(`Environment setup failed: ${error.message}`);
+            throw error;
         }
 
         console.log(chalk.green.bold(`\n🎉 Project Generation Complete! Your app is ready at:`));
