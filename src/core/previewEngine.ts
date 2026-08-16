@@ -72,10 +72,17 @@ export class PreviewEngine {
         return new Promise((resolve, reject) => {
             this.server = http.createServer((req, res) => {
                 let reqPath = req.url === '/' ? '/index.html' : req.url;
-                // Basic security against directory traversal
-                reqPath = reqPath?.replace(/\.\./g, '') || '';
                 
-                const filePath = path.join(dir, reqPath);
+                // Secure against directory traversal
+                const safeSuffix = reqPath ? reqPath.replace(/^\/+/, '') : '';
+                const filePath = path.resolve(dir, safeSuffix);
+                
+                // Ensure the resolved path strictly starts with the base directory
+                if (!filePath.startsWith(path.resolve(dir))) {
+                    res.writeHead(403);
+                    res.end('Forbidden');
+                    return;
+                }
                 
                 const extname = String(path.extname(filePath)).toLowerCase();
                 const mimeTypes: Record<string, string> = {

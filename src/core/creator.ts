@@ -53,7 +53,7 @@ export class ProjectCreator {
         // Create a summary of the blueprint to pass as context
         const blueprintContext = blueprint.map(b => `- ${b.path}: ${b.description}`).join('\n');
 
-        for (const file of blueprint) {
+        const generatePromises = blueprint.map(async (file) => {
             const spinner = ora(`Generating ${chalk.white.bold(file.path)}...`).start();
             try {
                 const fileCode = await this.generateFileContent(file, prompt, blueprintContext, providerOpt);
@@ -63,7 +63,9 @@ export class ProjectCreator {
             } catch (error: any) {
                 spinner.fail(`Failed to generate ${chalk.red(file.path)}: ${error.message}`);
             }
-        }
+        });
+
+        await Promise.all(generatePromises);
 
         // 4. Dependency Setup
         const packageJsonPath = path.join(outDir, 'package.json');

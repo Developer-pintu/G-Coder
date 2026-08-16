@@ -16,8 +16,9 @@ export interface ProviderConfig {
 export const getProviderConfig = (provider: string): ProviderConfig => {
     switch (provider) {
         case 'gemini':
+            const geminiModel = process.env.GEMINI_MODEL || 'gemini-3.1-pro';
             return {
-                url: (key) => `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${key}`,
+                url: (key) => `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${key}`,
                 headers: () => ({ 'Content-Type': 'application/json' }),
                 payload: (messages) => ({
                     contents: messages.map(m => ({
@@ -28,31 +29,35 @@ export const getProviderConfig = (provider: string): ProviderConfig => {
                 parse: (data) => data?.candidates?.[0]?.content?.parts?.[0]?.text
             };
         case 'anthropic':
+            const anthropicModel = process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20240620';
             return {
                 url: () => `https://api.anthropic.com/v1/messages`,
                 headers: (key) => ({ 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' }),
-                payload: (messages) => ({ model: "claude-3-5-sonnet-20240620", max_tokens: 4096, messages }),
+                payload: (messages) => ({ model: anthropicModel, max_tokens: 4096, messages }),
                 parse: (data) => data?.content?.[0]?.text
             };
         case 'deepseek':
+            const deepseekModel = process.env.DEEPSEEK_MODEL || 'deepseek-coder';
             return {
                 url: () => `https://api.deepseek.com/chat/completions`,
                 headers: (key) => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` }),
-                payload: (messages) => ({ model: "deepseek-coder", messages }),
+                payload: (messages) => ({ model: deepseekModel, messages }),
                 parse: (data) => data?.choices?.[0]?.message?.content
             };
         case 'openai':
+            const openaiModel = process.env.OPENAI_MODEL || 'gpt-4o';
             return {
                 url: () => `https://api.openai.com/v1/chat/completions`,
                 headers: (key) => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` }),
-                payload: (messages) => ({ model: "gpt-4o-mini", messages }),
+                payload: (messages) => ({ model: openaiModel, messages }),
                 parse: (data) => data?.choices?.[0]?.message?.content
             };
         case 'groq':
+            const groqModel = process.env.GROQ_MODEL || 'llama3-8b-8192';
             return {
                 url: () => `https://api.groq.com/openai/v1/chat/completions`,
                 headers: (key) => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` }),
-                payload: (messages) => ({ model: "llama3-8b-8192", messages }),
+                payload: (messages) => ({ model: groqModel, messages }),
                 parse: (data) => data?.choices?.[0]?.message?.content
             };
         case 'openrouter':
@@ -140,17 +145,13 @@ export const executeAiRequest = async (promptOrMessages: string | any[], provide
                 
                 const rotated = rotator.rotate();
                 if (!rotated) {
-                    console.error(chalk.red('\n[Fatal Error] Queue exhausted. All configured providers and API keys have failed.'));
-                    process.exit(1);
+                    throw new Error('\n[Fatal Error] Queue exhausted. All configured providers and API keys have failed.');
                 } else {
                     spinner.start('Retrying with fallback...');
                 }
             } else {
                 spinner.fail(`Unrecoverable error from ${activeProvider.toUpperCase()} API.`);
-                console.error(`Status: ${status || 'Unknown'}`);
-                console.error(`Message: ${error.message}`);
-                console.error(error.response?.data || '');
-                process.exit(1);
+                throw new Error(`Status: ${status || 'Unknown'}\nMessage: ${error.message}\nData: ${JSON.stringify(error.response?.data || '')}`);
             }
         }
     }

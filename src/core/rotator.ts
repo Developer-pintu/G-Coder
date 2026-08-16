@@ -26,8 +26,7 @@ export class UniversalKeyRotator {
         }
 
         if (this.activeProviders.length === 0) {
-            console.error(chalk.red('[Fatal Error] No API keys found for any provider (*_API_KEYS) in .env file.'));
-            process.exit(1);
+            throw new Error('[Fatal Error] No API keys found for any provider (*_API_KEYS) in .env file.');
         }
 
         // Try to set the preferred provider, or fallback to the first discovered provider

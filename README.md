@@ -1,11 +1,11 @@
 <div align="center">
 
 ```text
-   ____                 _           
-  / ___|      ___ ___  | | ___ _ __ 
- | |  _ _____/ __/ _ \ | |/ _ \ '__|
- | |_| |____| (_| (_) || |  __/ |   
-  \____|     \___\___/ |_|\___|_|   
+  ____        ____ ___  ____  _____ ____  
+ / ___|      / ___/ _ \|  _ \| ____|  _ \ 
+| |  _ _____| |  | | | | | | |  _| | |_) |
+| |_| |_____| |__| |_| | |_| | |___|  _ < 
+ \____|      \____\___/|____/|_____|_| \_\
 ```
 **Enterprise-Grade Autonomous AI Coding Agent**
 
@@ -13,7 +13,21 @@
 
 <br />
 
-Welcome to **g-coder**, the ultimate universal, multi-provider AI coding assistant designed to live right inside your terminal. Built with an architecture focused on security, speed, and autonomous capabilities.
+Welcome to **g-coder**, the ultimate universal, multi-provider AI coding assistant designed to live right inside your terminal. Built with an architecture focused on safety, speed, and massive autonomous capabilities.
+
+---
+
+## 🚀 Features at a Glance
+
+G-coder is not just a chat tool; it's a complete software engineering lifecycle agent.
+
+- **🤖 Zero-Knowledge Project Generator:** Run `g-coder create <prompt>` to generate an entire application (frontend, backend, database) from scratch, complete with automated dependency installation.
+- **📸 Visual Preview Engine:** Automatically launch a headless browser (Puppeteer) and local static server to take high-res screenshots of your generated UI with `g-coder preview`.
+- **📦 Atomic Batch Editor:** Safely edit multiple inter-dependent files at once with `g-coder batch`. All changes are atomic—if one fails, the whole transaction rolls back safely.
+- **🛡️ GitGuard & Self-Healing:** The agent creates invisible soft-commits before touching your code. If the code breaks, the `SelfHealer` automatically catches build errors, asks the LLM to fix them (up to 3 times), and rolls back perfectly if it fails.
+- **🌐 AI Git Operations:** Run `g-coder git push` to let the AI analyze your code changes and automatically write a professional `Conventional Commit` message. Or use `g-coder git publish` to automatically bootstrap a new GitHub repository from your terminal.
+- **🕵️ Model Scout:** An intelligent background engine that constantly pings global registries to notify you the moment a new AI model drops.
+- **🔑 Secure Key Rotator:** Your keys are kept completely safe in a hidden global folder (`~/.g-coder/.env`), completely avoiding accidental git leaks.
 
 ---
 
@@ -24,23 +38,16 @@ G-coder is engineered to bring enterprise-level AI autonomy directly to your com
 
 ---
 
-## 🔒 Safety-First Architecture
-Security is at the heart of g-coder. When executing autonomous commands:
-- **Global Key Storage:** Your API keys are NEVER stored in your local project's `.env`. They are safely managed globally in your home directory via the Secure Configuration Wizard.
-- **Human-in-the-Loop:** Before ANY destructive system action (e.g., deleting a file, moving folders, or executing a shell command), g-coder strictly pauses and demands a manual `"YES"` confirmation. 
-
----
-
 ## 🛠️ Installation
 
 G-coder is designed to be installed globally on your system.
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/g-coder.git
+git clone https://github.com/Developer-pintu/G-Coder.git
 
 # Navigate into the project
-cd g-coder
+cd G-Coder
 
 # Install dependencies and build the TypeScript source
 npm install
@@ -52,9 +59,9 @@ npm install -g .
 
 ---
 
-## 🔑 Secure Configuration Wizard (Important)
+## 🔑 Secure Configuration Wizard
 
-G-coder supports Google Gemini, OpenAI, Anthropic Claude, Groq, OpenRouter, and DeepSeek.
+G-coder supports **Google Gemini**, **OpenAI**, **Anthropic Claude**, **Groq**, **OpenRouter**, and **DeepSeek**.
 To prevent accidental GitHub leaks, **do not manually create `.env` files in your projects.**
 
 Run the built-in Secure Configuration Wizard anywhere in your terminal:
@@ -73,28 +80,38 @@ g-coder config
 
 Run `g-coder --help` to see all available commands.
 
-### 1. Interactive Chat (Recommended)
-Start a continuous, context-aware REPL session with the agent:
+### 🏗️ Project Generation
+Generate complete projects from a single sentence.
 ```bash
-g-coder chat
+g-coder create "A real-time chat application using Express and simple HTML"
 ```
 
-### 2. Run Autonomous Instructions
-Give the agent a single, direct task to execute on your system:
+### 📸 Visual Previews
+Take a headless screenshot of a local folder or remote URL.
 ```bash
-g-coder run "Create a new file called math.ts and implement a calculator class" -p groq
+g-coder preview ./my-app
 ```
 
-### 3. Static Code Auditing
-Run a full scan of your current workspace and calculate an Application Readiness Score:
+### ⚡ Atomic Batch Editing
+Edit multiple files simultaneously with strict Git rollback protection.
 ```bash
-g-coder audit
+g-coder batch "Rename user variables to account variables" --files src/db.ts src/auth.ts
 ```
 
-### 4. Self-Update Documentation
-G-coder can autonomously analyze its own codebase and update this very README!
+### 🌐 Smart Git Ops
+Automate your GitHub workflow using AI.
 ```bash
-g-coder update-docs
+g-coder git publish   # Autonomously creates a GitHub repo, writes a description, and pushes!
+g-coder git push      # Analyzes your code diff and writes a commit message automatically.
+g-coder git cleanup   # Safely sweeps away old branches.
+```
+
+### 🤖 Core Agent Commands
+```bash
+g-coder chat          # Start a continuous context-aware REPL session
+g-coder run [prompt]  # Run a single autonomous instruction
+g-coder ask [prompt]  # Ask a question without giving it file-editing powers
+g-coder audit         # Run an advanced static code analysis
 ```
 
 ---

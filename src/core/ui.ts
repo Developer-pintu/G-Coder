@@ -6,12 +6,11 @@ import chalk from 'chalk';
  */
 export const displayBanner = () => {
     const banner = `
-   ____                 _           
-  / ___|      ___ ___  | | ___ _ __ 
- | |  _ _____/ __/ _ \\ | |/ _ \\ '__|
- | |_| |____| (_| (_) || |  __/ |   
-  \\____|     \\___\\___/ |_|\\___|_|   
-                                    
+  ____        ____ ___  ____  _____ ____  
+ / ___|      / ___/ _ \\|  _ \\| ____|  _ \\ 
+| |  _ _____| |  | | | | | | |  _| | |_) |
+| |_| |_____| |__| |_| | |_| | |___|  _ < 
+ \\____|      \\____\\___/|____/|_____|_| \\_\\
     `;
     console.log(chalk.cyan.bold(banner));
     console.log(chalk.gray('  Enterprise-Grade Autonomous AI Coding Agent (v3.0.0)'));

@@ -22,6 +22,7 @@ import { ModelScout } from './core/modelScout';
 import { PreviewEngine } from './core/previewEngine';
 import { SystemAgent } from './core/agentEngine';
 import { SelfHealer } from './core/selfHealer';
+import { ProjectAuditor } from './core/auditor';
 
 // 1. Load local .env (takes precedence)
 dotenv.config();
@@ -205,8 +206,9 @@ program
 // Command: Audit
 program
   .command('audit')
-  .description('Advanced code auditing: analyzes the workspace for issues, leaks, and readiness')
-  .action(() => {
+  .description('Advanced code auditing: analyzes the workspace for issues, leaks, and readiness, and provides AI suggestions')
+  .option('-p, --provider <type>', 'Preferred provider for AI analysis', 'gemini')
+  .action(async (options) => {
       console.log(chalk.magenta.bold(`\n=== G-CODER ADVANCED AUDIT ===\n`));
       const cwd = process.cwd();
       const ig = ignore();
@@ -327,6 +329,10 @@ program
       if (score === 100) console.log(chalk.white(`  - Great job! The project looks very clean.`));
 
       console.log('\n');
+      
+      // 2. AI Advanced Static Audit
+      const auditor = new ProjectAuditor();
+      await auditor.runAudit(options.provider);
   });
 
 // Command: Run (Cognitive Agent)

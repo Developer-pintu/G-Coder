@@ -1,5 +1,6 @@
 import cp from 'child_process';
 import chalk from 'chalk';
+import inquirer from 'inquirer';
 import { executeAiRequest, buildAiPrompt } from './api';
 import { confirmAction } from './utils';
 
@@ -61,11 +62,22 @@ export class GitManager {
                     const diff = cp.execSync('git diff --cached', { encoding: 'utf-8' });
                     
                     if (diff.trim().length > 0) {
-                        const prompt = `Generate a single, short, professional conventional commit message (e.g., "feat: added login page") for the following git diff. Output ONLY the message, no quotes or explanation:\n\n${diff.substring(0, 3000)}`;
-                        const fullPrompt = buildAiPrompt('ask', prompt);
-                        let generated = await executeAiRequest(fullPrompt, providerOpt);
-                        commitMessage = generated.trim().replace(/^["']|["']$/g, '');
-                        console.log(chalk.green(`✔ AI Generated Message: `) + chalk.white(commitMessage));
+                        try {
+                            const prompt = `Generate a single, short, professional conventional commit message (e.g., "feat: added login page") for the following git diff. Output ONLY the message, no quotes or explanation:\n\n${diff.substring(0, 3000)}`;
+                            const fullPrompt = buildAiPrompt('ask', prompt);
+                            let generated = await executeAiRequest(fullPrompt, providerOpt);
+                            commitMessage = generated.trim().replace(/^["']|["']$/g, '');
+                            console.log(chalk.green(`✔ AI Generated Message: `) + chalk.white(commitMessage));
+                        } catch (aiError: any) {
+                            console.log(chalk.yellow(`\n⚠ AI commit generation failed: ${aiError.message}`));
+                            const answer = await inquirer.prompt([{
+                                type: 'input',
+                                name: 'manualMessage',
+                                message: 'Please enter a manual commit message:',
+                                default: 'chore: manual update'
+                            }]);
+                            commitMessage = answer.manualMessage;
+                        }
                     } else {
                         commitMessage = "chore: auto-sync update";
                     }
