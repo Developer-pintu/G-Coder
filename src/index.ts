@@ -10,7 +10,7 @@ import ora from 'ora';
 import chalk from 'chalk';
 import inquirer from 'inquirer';
 import ignore from 'ignore';
-import { displayBanner, displayHelp } from './core/ui';
+import { displayBanner, displayHelp, clearTerminal } from './core/ui';
 import { runConfigWizard } from './core/configManager';
 import { executeAiRequest, buildAiPrompt } from './core/api';
 import { Planner } from './core/planner';
@@ -48,8 +48,19 @@ program.on('--help', () => {
 
 // ==========================================
 // ==========================================
+// ==========================================
 // CLI COMMANDS
 // ==========================================
+
+// Command: Clear Terminal
+program
+  .command('clear')
+  .alias('cls')
+  .description('Clears the terminal screen and scrollback buffer for a clean workspace')
+  .action(() => {
+      clearTerminal();
+  });
+
 // Command: Create (Zero-Knowledge Project Generator)
 program
   .command('create')
@@ -380,22 +391,54 @@ program
           // 3. Execution Phase
           console.log(chalk.magenta.bold(`\n⚙️ Executing Approved Plan...`));
           const mentionedFilesContext = engine.readMentionedFiles(instruction);
-          const fullPrompt = buildAiPrompt('run', instruction + '\n\n' + mentionedFilesContext);
-          
-          const res = await executeAiRequest(fullPrompt, options.provider);
-          console.log(chalk.gray(`\n${res}\n`));
-          
-          const actions = engine.parseActions(res);
-          
-          if (actions.length > 0) {
-              try {
-                  await engine.executeActions(actions);
-              } catch (e: any) {
-                  console.log(chalk.red(`Execution Error: ${e.message}`));
-                  executionSuccess = false;
+          let executionHistory = '';
+          let loopCount = 0;
+          const MAX_LOOPS = 10;
+
+          while (loopCount < MAX_LOOPS) {
+              loopCount++;
+              console.log(chalk.gray(`\n[Agent Loop ${loopCount}/${MAX_LOOPS}] Thinking...`));
+              
+              const historyContext = executionHistory 
+                  ? `\n\n--- PREVIOUS EXECUTION OUTPUTS ---\n${executionHistory}\n--- END PREVIOUS OUTPUTS ---\n\n` 
+                  : '';
+              const fullPrompt = buildAiPrompt('run', instruction + '\n\n' + mentionedFilesContext + historyContext);
+              
+              const res = await executeAiRequest(fullPrompt, options.provider);
+              console.log(chalk.gray(`\n${res}\n`));
+              
+              const actions = engine.parseActions(res);
+              
+              if (actions.length > 0) {
+                  const hasDone = actions.some(a => a.type === 'done');
+                  
+                  try {
+                      const result = await engine.executeActions(actions);
+                      if (result.success && result.output) {
+                          executionHistory += result.output;
+                      }
+                      if (!result.success) {
+                          executionSuccess = false;
+                          break;
+                      }
+                  } catch (e: any) {
+                      console.log(chalk.red(`Execution Error: ${e.message}`));
+                      executionSuccess = false;
+                      break;
+                  }
+
+                  if (hasDone) {
+                      console.log(chalk.green(`\n✔ Task explicitly marked as DONE by Agent.`));
+                      break;
+                  }
+              } else {
+                  console.log(chalk.yellow('[Agent] No specific file writes or commands were proposed by the AI. Ending loop.'));
+                  break;
               }
-          } else {
-              console.log(chalk.yellow('[Agent] No specific file writes or commands were proposed by the AI.'));
+          }
+
+          if (loopCount >= MAX_LOOPS) {
+              console.log(chalk.yellow(`\n⚠️ Maximum Agent iterations (${MAX_LOOPS}) reached.`));
           }
 
           // 4. Self-Healing Verification Phase

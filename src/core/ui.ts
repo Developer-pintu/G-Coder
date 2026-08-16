@@ -42,3 +42,17 @@ export const displayHelp = () => {
     console.log(chalk.gray('  $ g-coder run "Refactor the rotator.ts file to use a class" -p groq'));
     console.log(chalk.gray('  $ g-coder audit\n'));
 };
+
+/**
+ * Safely and robustly clears the terminal screen across all platforms.
+ * It clears the screen, the scrollback buffer, and resets the cursor.
+ */
+export const clearTerminal = () => {
+    // console.clear() is highly optimized for platform-specific (Windows/Mac) scrollback clearing
+    console.clear();
+    process.stdout.write('\x1B[3J'); // Backup escape for older terminals
+
+    // Print a clean, professional header
+    console.log(chalk.cyan.bold('\n=== G-CODER ==='));
+    console.log(chalk.green('Ready for command...\n'));
+};

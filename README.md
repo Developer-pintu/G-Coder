@@ -22,6 +22,8 @@ Welcome to **g-coder**, the ultimate universal, multi-provider AI coding assista
 G-coder is not just a chat tool; it's a complete software engineering lifecycle agent.
 
 - **🤖 Zero-Knowledge Project Generator:** Run `g-coder create <prompt>` to generate an entire application (frontend, backend, database) from scratch, complete with automated dependency installation.
+- **⚡ Precise Diff-Patching (Smart Token Optimizer):** Replaces full-file overwrites with lightweight `<<SEARCH>>` and `<<REPLACE>>` diff blocks to massively reduce token usage and bypass API limits seamlessly.
+- **⏱️ API Request Throttling & Backoff:** Implements strict request delays (2.5s) and dynamic exponential backoffs (5s, 10s, 15s) to guarantee high-performance execution without triggering `429 Too Many Requests` or `503 Server Overload` limits.
 - **📸 Visual Preview Engine:** Automatically launch a headless browser (Puppeteer) and local static server to take high-res screenshots of your generated UI with `g-coder preview`.
 - **📦 Atomic Batch Editor:** Safely edit multiple inter-dependent files at once with `g-coder batch`. All changes are atomic—if one fails, the whole transaction rolls back safely.
 - **🛡️ GitGuard & Self-Healing:** The agent creates invisible soft-commits before touching your code. If the code breaks, the `SelfHealer` automatically catches build errors, asks the LLM to fix them (up to 3 times), and rolls back perfectly if it fails.
@@ -112,6 +114,7 @@ g-coder chat          # Start a continuous context-aware REPL session
 g-coder run [prompt]  # Run a single autonomous instruction
 g-coder ask [prompt]  # Ask a question without giving it file-editing powers
 g-coder audit         # Run an advanced static code analysis
+g-coder clear / cls   # High-performance clear screen (flushes terminal and scrollback buffer)
 ```
 
 ---

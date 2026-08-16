@@ -8,7 +8,7 @@ import { confirmAction } from './utils';
 import { OptimizerEngine } from './optimizerEngine';
 
 export interface Action {
-    type: 'write' | 'read' | 'delete' | 'move' | 'run' | 'patch';
+    type: 'write' | 'read' | 'delete' | 'move' | 'run' | 'patch' | 'done';
     path?: string;
     destination?: string;
     content?: string;
@@ -109,12 +109,15 @@ export class SystemAgent {
 
     /**
      * Confirms and executes actions safely with strict human-in-the-loop permission.
+     * Captures and returns the execution output to feed back into the AI loop.
      */
-    public async executeActions(actions: Action[]): Promise<void> {
-        if (actions.length === 0) return;
+    public async executeActions(actions: Action[]): Promise<{ success: boolean, output: string }> {
+        if (actions.length === 0) return { success: true, output: 'No actions to execute.' };
         const optimizer = new OptimizerEngine();
 
         console.log(chalk.blue('\n[SystemAgent] The AI wants to perform the following system actions:\n'));
+
+        let executionOutput = '';
 
         let hasDangerousAction = false;
         let actionDescriptions: string[] = [];
@@ -151,6 +154,8 @@ export class SystemAgent {
                 console.log(chalk.red.bold(` ${idx + 1}. RUN COMMAND: ${displayCmd}`));
                 actionDescriptions.push(`Run command: ${displayCmd}`);
                 hasDangerousAction = true;
+            } else if (action.type === 'done') {
+                console.log(chalk.green(` ${idx + 1}. TASK DONE`));
             }
         });
 
@@ -162,13 +167,13 @@ export class SystemAgent {
             const isConfirmed = await confirmAction(chalk.red.bold('Are you sure you want to proceed?'));
             if (!isConfirmed) {
                 console.log(chalk.yellow('Actions aborted by user. Safety first.'));
-                return;
+                return { success: false, output: 'Execution aborted by user.' };
             }
         } else {
             const isConfirmed = await confirmAction(chalk.cyan('Do you want to allow these read actions?'));
             if (!isConfirmed) {
                 console.log(chalk.yellow('Actions aborted by user.'));
-                return;
+                return { success: false, output: 'Execution aborted by user.' };
             }
         }
 
@@ -179,6 +184,7 @@ export class SystemAgent {
                     const target = this.resolvePath(action.path);
                     fse.outputFileSync(target, action.content, 'utf-8');
                     console.log(chalk.green(`✔ Successfully Wrote: ${target}`));
+                    executionOutput += `\n[WRITE SUCCESS] ${target}`;
                 } else if (action.type === 'read' && action.path) {
                     const target = this.resolvePath(action.path);
                     if (fse.existsSync(target)) {
@@ -186,40 +192,58 @@ export class SystemAgent {
                         if (stat.isFile()) {
                             const content = fse.readFileSync(target, 'utf-8');
                             console.log(chalk.cyan(`✔ Read File: ${target} (${content.length} chars)`));
+                            executionOutput += `\n[READ FILE ${target}]\n${content}\n`;
                         } else {
                             const items = fse.readdirSync(target);
                             console.log(chalk.cyan(`✔ Read Directory: ${target}\nContents: ${items.join(', ')}`));
+                            executionOutput += `\n[READ DIR ${target}]\n${items.join(', ')}\n`;
                         }
                     } else {
                         console.log(chalk.yellow(`✖ Read Failed: Path not found: ${target}`));
+                        executionOutput += `\n[READ FAILED] Path not found: ${target}`;
                     }
                 } else if (action.type === 'delete' && action.path) {
                     const target = this.resolvePath(action.path);
                     fse.removeSync(target);
                     console.log(chalk.green(`✔ Successfully Deleted: ${target}`));
+                    executionOutput += `\n[DELETE SUCCESS] ${target}`;
                 } else if (action.type === 'move' && action.path && action.destination) {
                     const src = this.resolvePath(action.path);
                     const dest = this.resolvePath(action.destination);
                     fse.moveSync(src, dest, { overwrite: true });
                     console.log(chalk.green(`✔ Successfully Moved: ${src} -> ${dest}`));
+                    executionOutput += `\n[MOVE SUCCESS] ${src} -> ${dest}`;
                 } else if (action.type === 'patch' && action.path && action.patchBlock) {
                     const patched = optimizer.applyDiffPatch(action.path, action.patchBlock);
                     if (!patched) {
                         console.log(chalk.red(`✖ Failed to apply precise diff patch to: ${action.path}`));
+                        executionOutput += `\n[PATCH FAILED] Could not apply patch to ${action.path}. Ensure <<SEARCH>> block exactly matches existing file contents.`;
+                    } else {
+                        executionOutput += `\n[PATCH SUCCESS] ${action.path}`;
                     }
                 } else if (action.type === 'run' && action.command) {
                     const displayCmd = action.command.length > 60
                         ? action.command.substring(0, 60) + '...'
                         : action.command;
                     console.log(chalk.cyan(`► Running: ${displayCmd}`));
-                    const out = cp.execSync(action.command, { cwd: this.cwd, encoding: 'utf-8', stdio: 'pipe' });
-                    console.log(chalk.gray(out));
-                    console.log(chalk.green(`✔ Command Success`));
+                    try {
+                        const out = cp.execSync(action.command, { cwd: this.cwd, encoding: 'utf-8', stdio: 'pipe' });
+                        console.log(chalk.gray(out));
+                        console.log(chalk.green(`✔ Command Success`));
+                        executionOutput += `\n[RUN CMD: ${action.command}]\nSTDOUT:\n${out}\n`;
+                    } catch (cmdErr: any) {
+                        console.log(chalk.red(`✖ Command Failed`));
+                        executionOutput += `\n[RUN FAILED CMD: ${action.command}]\nERROR/STDERR:\n${cmdErr.message}\n${cmdErr.stderr || ''}\n`;
+                    }
+                } else if (action.type === 'done') {
+                    executionOutput += `\n[TASK DONE]`;
                 }
             } catch (e: any) {
                 console.error(chalk.red(`✖ Action Failed [${action.type}]: ${e.message}`));
+                executionOutput += `\n[ACTION FAILED ${action.type}] ${e.message}`;
             }
         }
         console.log(chalk.green('\nAll authorized actions completed.\n'));
+        return { success: true, output: executionOutput };
     }
 }

@@ -59,7 +59,7 @@ export const getProviderConfig = (provider: string): ProviderConfig => {
                 parse: (data) => data?.choices?.[0]?.message?.content
             };
         case 'groq':
-            const groqModel = process.env.GROQ_MODEL || 'llama3-8b-8192';
+            const groqModel = process.env.GROQ_MODEL || 'llama-3.1-70b-versatile';
             return {
                 url: () => `https://api.groq.com/openai/v1/chat/completions`,
                 headers: (key) => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` }),
@@ -89,28 +89,30 @@ export const buildAiPrompt = (mode: string, input: string): string => {
 
     if (mode === 'edit' || mode === 'config' || mode === 'run' || mode === 'plan') {
         instruction = `You are an elite Autonomous AI Coding Agent (Principal Software Engineer & System Architect) with SYSTEM-LEVEL ACCESS.\n` +
-                      `Your mission is to execute complex, multi-file development and bug-fixing tasks with ABSOLUTE PERFECTION, ZERO ERRORS, and PERSISTENT MEMORY.\n\n` +
-                      `OPERATIONAL RULES:\n` +
-                      `1. Persistent Task & Bug Memory: Track and fix all requested bugs/features without dropping any context.\n` +
-                      `2. Multi-File Concurrent Operations: Read, modify, write multiple files atomically. No partial updates.\n` +
-                      `3. Strict Self-Healing & Zero-Error Policy: Detect errors, fix your own code, and output 100% executable files.\n` +
-                      `4. Complete & Production-Ready Output: NEVER use placeholders like '// TODO' or '// rest of code here'. Provide the full, complete code.\n` +
-                      `5. Final Verification Report: Provide a summary at the end of your response including: Files Modified, Bugs Fixed, Build Status.\n\n` +
-                      `Your task is: ${input}\n\n` +
-                      `You can read, write, move, delete files anywhere on the system (C:/, D:/, etc) and run safe shell commands.\n` +
-                      `To perform actions, you MUST output a JSON block wrapped exactly in \`\`\`json ... \`\`\`.\n` +
-                      `JSON Format Schema Example:\n` +
-                      `\`\`\`json\n` +
-                      `{\n` +
-                      `  "actions": [\n` +
-                      `    { "type": "read", "path": "C:/config.json" },\n` +
-                      `    { "type": "write", "path": "D:/projects/app/src/index.ts", "content": "console.log('Hello');" },\n` +
-                      `    { "type": "patch", "path": "src/utils.ts", "patchBlock": "<<SEARCH>>\\nold code\\n<<REPLACE>>\\nnew code\\n<<END>>" },\n` +
-                      `    { "type": "run", "command": "npm run build" }\n` +
-                      `  ]\n` +
-                      `}\n` +
-                      `\`\`\`\n` +
-                      `Provide absolute or relative paths. Use precise 'patch' actions instead of full 'write' overwrites whenever possible to save tokens.`;
+            `Your mission is to execute complex, multi-file development and bug-fixing tasks with ABSOLUTE PERFECTION, ZERO ERRORS, and PERSISTENT MEMORY.\n\n` +
+            `OPERATIONAL RULES:\n` +
+            `1. Persistent Task & Bug Memory: Track and fix all requested bugs/features without dropping any context.\n` +
+            `2. Multi-File Concurrent Operations: Read, modify, write multiple files atomically. No partial updates.\n` +
+            `3. Strict Self-Healing & Zero-Error Policy: Detect errors, fix your own code, and output 100% executable files.\n` +
+            `4. Complete & Production-Ready Output: NEVER use placeholders like '// TODO' or '// rest of code here'. Provide the full, complete code.\n` +
+            `5. Final Verification Report: Provide a summary at the end of your response including: Files Modified, Bugs Fixed, Build Status.\n\n` +
+            `Your task is: ${input}\n\n` +
+            `You can read, write, move, delete files anywhere on the system (C:/, D:/, etc) and run safe shell commands.\n` +
+            `To perform actions, you MUST output a JSON block wrapped exactly in \`\`\`json ... \`\`\`.\n` +
+            `JSON Format Schema Example:\n` +
+            `\`\`\`json\n` +
+            `{\n` +
+            `  "actions": [\n` +
+            `    { "type": "read", "path": "C:/config.json" },\n` +
+            `    { "type": "write", "path": "D:/projects/app/src/index.ts", "content": "console.log('Hello');" },\n` +
+            `    { "type": "patch", "path": "src/utils.ts", "patchBlock": "<<SEARCH>>\\nold code\\n<<REPLACE>>\\nnew code\\n<<END>>" },\n` +
+            `    { "type": "run", "command": "npm run build" },\n` +
+            `    { "type": "done" }\n` +
+            `  ]\n` +
+            `}\n` +
+            `\`\`\`\n` +
+            `CRITICAL MULTI-TURN LOOP RULE: The system will execute your 'read' and 'run' actions and feed the exact outputs back to you in the next iteration. You can loop as many times as needed to read, think, and test. ONCE the requested task is 100% complete, you MUST output a 'done' action to exit the loop.\n` +
+            `Provide absolute or relative paths. Use precise 'patch' actions instead of full 'write' overwrites whenever possible to save tokens.`;
     } else {
         instruction = `You are an elite AI coding assistant. Answer the user's prompt: ${input}`;
     }
@@ -120,7 +122,7 @@ export const buildAiPrompt = (mode: string, input: string): string => {
 
 export const executeAiRequest = async (promptOrMessages: string | any[], providerOpt: string): Promise<string> => {
     const rotator = new UniversalKeyRotator(providerOpt);
-    
+
     let success = false;
     let responseText = "";
     const spinner = ora('Agent is thinking...').start();
@@ -134,7 +136,7 @@ export const executeAiRequest = async (promptOrMessages: string | any[], provide
         const activeProvider = rotator.getActiveProvider();
         const activeKey = rotator.getActiveKey();
         const config = getProviderConfig(activeProvider);
-        
+
         spinner.text = `Contacting ${activeProvider.toUpperCase()} API...`;
 
         try {
@@ -152,7 +154,7 @@ export const executeAiRequest = async (promptOrMessages: string | any[], provide
 
             const response = await axios.post(url, payload, { headers });
             lastApiCallTime = Date.now();
-            
+
             responseText = config.parse(response.data);
 
             if (!responseText) {
@@ -164,7 +166,7 @@ export const executeAiRequest = async (promptOrMessages: string | any[], provide
 
         } catch (error: any) {
             const status = error.response?.status;
-            
+
             if (status === 429 || status === 404 || status === 403 || status === 401 || status === 503 || !status) {
                 spinner.fail(`Failed with ${activeProvider.toUpperCase()} (Status: ${status || 'Network Error'}).`);
                 let reason = "API Key Error";
@@ -177,7 +179,7 @@ export const executeAiRequest = async (promptOrMessages: string | any[], provide
                     if (keyRetryCount <= MAX_KEY_RETRIES) {
                         // Exponential backoff: 5s, then 10s, then 15s...
                         const delayMs = keyRetryCount * 5000;
-                        console.log(chalk.yellow(`\n[API Limits] ${reason}. Waiting ${delayMs/1000}s before retrying...`));
+                        console.log(chalk.yellow(`\n[API Limits] ${reason}. Waiting ${delayMs / 1000}s before retrying...`));
                         await sleep(delayMs);
                         spinner.start(`Retrying (Attempt ${keyRetryCount}/${MAX_KEY_RETRIES})...`);
                         continue;
@@ -198,6 +200,6 @@ export const executeAiRequest = async (promptOrMessages: string | any[], provide
             }
         }
     }
-    
+
     return responseText;
 };
