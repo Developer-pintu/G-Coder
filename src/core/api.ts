@@ -13,10 +13,16 @@ export interface ProviderConfig {
     parse: (data: any) => string;
 }
 
+const MAX_KEYS = 3;
+let lastApiCallTime = 0;
+const GLOBAL_THROTTLE_MS = 2500; // 2.5 seconds minimum between API calls
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 export const getProviderConfig = (provider: string): ProviderConfig => {
     switch (provider) {
         case 'gemini':
-            const geminiModel = process.env.GEMINI_MODEL || 'gemini-3.1-pro';
+            const geminiModel = process.env.GEMINI_MODEL || 'gemini-flash-latest';
             return {
                 url: (key) => `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${key}`,
                 headers: () => ({ 'Content-Type': 'application/json' }),
@@ -82,8 +88,15 @@ export const buildAiPrompt = (mode: string, input: string): string => {
     let instruction = '';
 
     if (mode === 'edit' || mode === 'config' || mode === 'run' || mode === 'plan') {
-        instruction = `You are an elite Autonomous AI Coding Agent with SYSTEM-LEVEL ACCESS.\n` +
-                      `Your task is: ${input}\n` +
+        instruction = `You are an elite Autonomous AI Coding Agent (Principal Software Engineer & System Architect) with SYSTEM-LEVEL ACCESS.\n` +
+                      `Your mission is to execute complex, multi-file development and bug-fixing tasks with ABSOLUTE PERFECTION, ZERO ERRORS, and PERSISTENT MEMORY.\n\n` +
+                      `OPERATIONAL RULES:\n` +
+                      `1. Persistent Task & Bug Memory: Track and fix all requested bugs/features without dropping any context.\n` +
+                      `2. Multi-File Concurrent Operations: Read, modify, write multiple files atomically. No partial updates.\n` +
+                      `3. Strict Self-Healing & Zero-Error Policy: Detect errors, fix your own code, and output 100% executable files.\n` +
+                      `4. Complete & Production-Ready Output: NEVER use placeholders like '// TODO' or '// rest of code here'. Provide the full, complete code.\n` +
+                      `5. Final Verification Report: Provide a summary at the end of your response including: Files Modified, Bugs Fixed, Build Status.\n\n` +
+                      `Your task is: ${input}\n\n` +
                       `You can read, write, move, delete files anywhere on the system (C:/, D:/, etc) and run safe shell commands.\n` +
                       `To perform actions, you MUST output a JSON block wrapped exactly in \`\`\`json ... \`\`\`.\n` +
                       `JSON Format Schema Example:\n` +
@@ -92,13 +105,12 @@ export const buildAiPrompt = (mode: string, input: string): string => {
                       `  "actions": [\n` +
                       `    { "type": "read", "path": "C:/config.json" },\n` +
                       `    { "type": "write", "path": "D:/projects/app/src/index.ts", "content": "console.log('Hello');" },\n` +
-                      `    { "type": "move", "path": "C:/old.txt", "destination": "C:/new.txt" },\n` +
-                      `    { "type": "delete", "path": "D:/temp" },\n` +
-                      `    { "type": "run", "command": "npm install lodash" }\n` +
+                      `    { "type": "patch", "path": "src/utils.ts", "patchBlock": "<<SEARCH>>\\nold code\\n<<REPLACE>>\\nnew code\\n<<END>>" },\n` +
+                      `    { "type": "run", "command": "npm run build" }\n` +
                       `  ]\n` +
                       `}\n` +
                       `\`\`\`\n` +
-                      `Provide absolute or relative paths. Always provide full file contents when writing.`;
+                      `Provide absolute or relative paths. Use precise 'patch' actions instead of full 'write' overwrites whenever possible to save tokens.`;
     } else {
         instruction = `You are an elite AI coding assistant. Answer the user's prompt: ${input}`;
     }
@@ -115,6 +127,9 @@ export const executeAiRequest = async (promptOrMessages: string | any[], provide
 
     const messages = typeof promptOrMessages === 'string' ? [{ role: 'user', content: promptOrMessages }] : promptOrMessages;
 
+    let keyRetryCount = 0;
+    const MAX_KEY_RETRIES = 3;
+
     while (!success) {
         const activeProvider = rotator.getActiveProvider();
         const activeKey = rotator.getActiveKey();
@@ -123,11 +138,21 @@ export const executeAiRequest = async (promptOrMessages: string | any[], provide
         spinner.text = `Contacting ${activeProvider.toUpperCase()} API...`;
 
         try {
+            // Strict Request Throttling
+            const now = Date.now();
+            const timeSinceLastCall = now - lastApiCallTime;
+            if (timeSinceLastCall < GLOBAL_THROTTLE_MS) {
+                const waitTime = GLOBAL_THROTTLE_MS - timeSinceLastCall;
+                await sleep(waitTime);
+            }
+
             const url = config.url(activeKey);
             const headers = config.headers(activeKey);
             const payload = config.payload(messages, activeKey);
 
             const response = await axios.post(url, payload, { headers });
+            lastApiCallTime = Date.now();
+            
             responseText = config.parse(response.data);
 
             if (!responseText) {
@@ -142,11 +167,29 @@ export const executeAiRequest = async (promptOrMessages: string | any[], provide
             
             if (status === 429 || status === 404 || status === 403 || status === 401 || status === 503 || !status) {
                 spinner.fail(`Failed with ${activeProvider.toUpperCase()} (Status: ${status || 'Network Error'}).`);
-                
+                let reason = "API Key Error";
+                if (status === 429) reason = "Rate Limit Exceeded";
+                else if (status === 503) reason = "Server Outage / Overloaded";
+                else if (status === 404) reason = "Model Not Found";
+
+                if (status === 429 || status === 503) {
+                    keyRetryCount++;
+                    if (keyRetryCount <= MAX_KEY_RETRIES) {
+                        // Exponential backoff: 5s, then 10s, then 15s...
+                        const delayMs = keyRetryCount * 5000;
+                        console.log(chalk.yellow(`\n[API Limits] ${reason}. Waiting ${delayMs/1000}s before retrying...`));
+                        await sleep(delayMs);
+                        spinner.start(`Retrying (Attempt ${keyRetryCount}/${MAX_KEY_RETRIES})...`);
+                        continue;
+                    }
+                }
+
+                console.log(chalk.yellow(`\n[Failover] ${reason}. Switched to Next Key (Index: ${(rotator as any).currentKeyIndex + 1}) for Provider: ${activeProvider.toUpperCase()}  `));
                 const rotated = rotator.rotate();
                 if (!rotated) {
                     throw new Error('\n[Fatal Error] Queue exhausted. All configured providers and API keys have failed.');
                 } else {
+                    keyRetryCount = 0; // Reset for the next key
                     spinner.start('Retrying with fallback...');
                 }
             } else {

@@ -5,13 +5,15 @@ import inquirer from 'inquirer';
 import chalk from 'chalk';
 import ignore from 'ignore';
 import { confirmAction } from './utils';
+import { OptimizerEngine } from './optimizerEngine';
 
 export interface Action {
-    type: 'write' | 'read' | 'delete' | 'move' | 'run';
+    type: 'write' | 'read' | 'delete' | 'move' | 'run' | 'patch';
     path?: string;
     destination?: string;
     content?: string;
     command?: string;
+    patchBlock?: string;
 }
 
 export class SystemAgent {
@@ -110,6 +112,7 @@ export class SystemAgent {
      */
     public async executeActions(actions: Action[]): Promise<void> {
         if (actions.length === 0) return;
+        const optimizer = new OptimizerEngine();
 
         console.log(chalk.blue('\n[SystemAgent] The AI wants to perform the following system actions:\n'));
 
@@ -135,6 +138,11 @@ export class SystemAgent {
                 const dest = this.resolvePath(action.destination || '');
                 console.log(chalk.magenta(` ${idx + 1}. MOVE: ${src} -> ${dest}`));
                 actionDescriptions.push(`Move ${src} to ${dest}`);
+                hasDangerousAction = true;
+            } else if (action.type === 'patch') {
+                const target = this.resolvePath(action.path || '');
+                console.log(chalk.yellow(` ${idx + 1}. PATCH FILE: ${target}`));
+                actionDescriptions.push(`Patch ${target}`);
                 hasDangerousAction = true;
             } else if (action.type === 'run') {
                 const displayCmd = action.command && action.command.length > 60
@@ -194,6 +202,11 @@ export class SystemAgent {
                     const dest = this.resolvePath(action.destination);
                     fse.moveSync(src, dest, { overwrite: true });
                     console.log(chalk.green(`✔ Successfully Moved: ${src} -> ${dest}`));
+                } else if (action.type === 'patch' && action.path && action.patchBlock) {
+                    const patched = optimizer.applyDiffPatch(action.path, action.patchBlock);
+                    if (!patched) {
+                        console.log(chalk.red(`✖ Failed to apply precise diff patch to: ${action.path}`));
+                    }
                 } else if (action.type === 'run' && action.command) {
                     const displayCmd = action.command.length > 60
                         ? action.command.substring(0, 60) + '...'

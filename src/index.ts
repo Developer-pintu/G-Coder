@@ -208,6 +208,7 @@ program
   .command('audit')
   .description('Advanced code auditing: analyzes the workspace for issues, leaks, and readiness, and provides AI suggestions')
   .option('-p, --provider <type>', 'Preferred provider for AI analysis', 'gemini')
+  .option('-f, --fix', 'Automatically fix the issues found in the audit')
   .action(async (options) => {
       console.log(chalk.magenta.bold(`\n=== G-CODER ADVANCED AUDIT ===\n`));
       const cwd = process.cwd();
@@ -332,7 +333,7 @@ program
       
       // 2. AI Advanced Static Audit
       const auditor = new ProjectAuditor();
-      await auditor.runAudit(options.provider);
+      await auditor.runAudit(options.provider, { fix: options.fix });
   });
 
 // Command: Run (Cognitive Agent)
@@ -364,49 +365,55 @@ program
       const planner = new Planner();
       const gitGuard = new GitGuard();
       const healer = new SelfHealer(engine);
-
-      // 1. Planner Phase
-      const isPlanApproved = await planner.createAndConfirmPlan(instruction, options.provider);
-      if (!isPlanApproved) {
-          process.exit(0);
-      }
-
-      // 2. Git Checkpoint Phase
-      gitGuard.checkpoint();
-
-      // 3. Execution Phase
-      console.log(chalk.magenta.bold(`\n⚙️ Executing Approved Plan...`));
-      const mentionedFilesContext = engine.readMentionedFiles(instruction);
-      const fullPrompt = buildAiPrompt('run', instruction + '\n\n' + mentionedFilesContext);
-      
-      const res = await executeAiRequest(fullPrompt, options.provider);
-      console.log(chalk.gray(`\n${res}\n`));
-      
-      const actions = engine.parseActions(res);
       let executionSuccess = true;
-      
-      if (actions.length > 0) {
-          try {
-              await engine.executeActions(actions);
-          } catch (e: any) {
-              console.log(chalk.red(`Execution Error: ${e.message}`));
-              executionSuccess = false;
+
+      try {
+          // 1. Planner Phase
+          const isPlanApproved = await planner.createAndConfirmPlan(instruction, options.provider);
+          if (!isPlanApproved) {
+              process.exit(0);
           }
-      } else {
-          console.log(chalk.yellow('[Agent] No specific file writes or commands were proposed by the AI.'));
+
+          // 2. Git Checkpoint Phase
+          gitGuard.checkpoint();
+
+          // 3. Execution Phase
+          console.log(chalk.magenta.bold(`\n⚙️ Executing Approved Plan...`));
+          const mentionedFilesContext = engine.readMentionedFiles(instruction);
+          const fullPrompt = buildAiPrompt('run', instruction + '\n\n' + mentionedFilesContext);
+          
+          const res = await executeAiRequest(fullPrompt, options.provider);
+          console.log(chalk.gray(`\n${res}\n`));
+          
+          const actions = engine.parseActions(res);
+          
+          if (actions.length > 0) {
+              try {
+                  await engine.executeActions(actions);
+              } catch (e: any) {
+                  console.log(chalk.red(`Execution Error: ${e.message}`));
+                  executionSuccess = false;
+              }
+          } else {
+              console.log(chalk.yellow('[Agent] No specific file writes or commands were proposed by the AI.'));
+          }
+
+          // 4. Self-Healing Verification Phase
+          if (executionSuccess && !options.noHeal) {
+              // If the project has a package.json, we run build
+              const hasPackageJson = fs.existsSync(path.join(process.cwd(), 'package.json'));
+              if (hasPackageJson) {
+                 const buildPassed = await healer.verifyAndHeal(options.provider, 'npm run build');
+                 if (!buildPassed) {
+                     executionSuccess = false;
+                 }
+              }
+          }
+      } catch (err: any) {
+          console.log(chalk.red(`\n❌ Task failed: ${err.message}`));
+          executionSuccess = false;
       }
 
-      // 4. Self-Healing Verification Phase
-      if (executionSuccess && !options.noHeal) {
-          // If the project has a package.json, we run build
-          const hasPackageJson = fs.existsSync(path.join(process.cwd(), 'package.json'));
-          if (hasPackageJson) {
-             const buildPassed = await healer.verifyAndHeal(options.provider, 'npm run build');
-             if (!buildPassed) {
-                 executionSuccess = false;
-             }
-          }
-      }
 
       // 5. Cleanup or Rollback
       if (executionSuccess) {

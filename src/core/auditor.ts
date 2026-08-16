@@ -3,9 +3,11 @@ import fse from 'fs-extra';
 import path from 'path';
 import ora from 'ora';
 import { executeAiRequest, buildAiPrompt } from './api';
+import { OptimizerEngine } from './optimizerEngine';
+import cp from 'child_process';
 
 export class ProjectAuditor {
-    public async runAudit(providerOpt: string) {
+    public async runAudit(providerOpt: string, options: { fix?: boolean } = {}) {
         console.log(chalk.magenta.bold(`\n🕵️‍♂️ Initializing Advanced Static Code Audit...`));
         const spinner = ora('Scanning project structure and reading core files...').start();
         
@@ -54,7 +56,13 @@ export class ProjectAuditor {
 
             console.log(chalk.green.bold(`\n📊 AUDIT REPORT:\n`));
             console.log(chalk.white(report));
-            console.log(chalk.yellow(`\n💡 Tip: If you agree with these suggestions, you can run \`g-coder run "<suggestion>"\` to implement them.`));
+
+            if (options.fix) {
+                console.log(chalk.magenta.bold(`\n🛠️ Initializing Smart Token Optimizer & Diff-Patcher...`));
+                await this.autoFixIssues(report, filesToAudit, providerOpt);
+            } else {
+                console.log(chalk.yellow(`\n💡 Tip: Run \`g-coder audit --fix\` to automatically resolve these issues securely.`));
+            }
 
         } catch (error: any) {
             spinner.fail(`Audit failed: ${error.message}`);
@@ -75,5 +83,59 @@ export class ProjectAuditor {
                 arrayOfFiles.push(absolute);
             }
         });
+    }
+
+    private async autoFixIssues(report: string, files: string[], providerOpt: string) {
+        const optimizer = new OptimizerEngine();
+        const filesToFix = files.filter(f => report.includes(path.basename(f)));
+        
+        if (filesToFix.length === 0) {
+            console.log(chalk.green(`No specific files identified for fixing, or codebase is clean.`));
+            return;
+        }
+
+        console.log(chalk.cyan(`Identified ${filesToFix.length} files that need patching. Applying fixes...`));
+
+        for (const file of filesToFix) {
+            const relPath = path.relative(process.cwd(), file);
+            console.log(chalk.blue(`\n🩹 Patching ${relPath}...`));
+            
+            const fileContent = fse.readFileSync(file, 'utf-8');
+            const fixPrompt = `Based on the following audit report, generate a precise Diff Patch to fix issues in ${relPath}.
+            
+Report: ${report.substring(0, 1000)}
+
+File Content:
+${fileContent}
+
+RULES:
+- ONLY output the patch blocks. Do not rewrite the whole file.
+- Use this exact format:
+<<SEARCH>>
+exact code to replace
+<<REPLACE>>
+new fixed code
+<<END>>`;
+
+            try {
+                const fullPrompt = buildAiPrompt('ask', fixPrompt);
+                const patchResponse = await executeAiRequest(fullPrompt, providerOpt);
+                const patched = optimizer.applyDiffPatch(file, patchResponse);
+                
+                if (!patched) {
+                    console.log(chalk.yellow(`Could not automatically patch ${relPath}.`));
+                }
+            } catch (e: any) {
+                console.log(chalk.red(`Failed to patch ${relPath}: ${e.message}`));
+            }
+        }
+
+        console.log(chalk.magenta.bold(`\n🔬 Verifying Fixes (npm run build)...`));
+        try {
+            cp.execSync('npm run build', { stdio: 'inherit' });
+            console.log(chalk.green.bold(`\n✅ Build successful! All audit fixes applied securely.`));
+        } catch (e) {
+            console.log(chalk.red.bold(`\n❌ Build failed after patching. Manual review required.`));
+        }
     }
 }

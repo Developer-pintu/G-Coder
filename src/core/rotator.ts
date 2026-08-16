@@ -67,7 +67,6 @@ export class UniversalKeyRotator {
         // Try next key for the SAME provider
         if (this.currentKeyIndex < keys.length - 1) {
             this.currentKeyIndex++;
-            console.warn(chalk.yellow(`\n[Failover] Rate limit hit. Switched to Next Key (Index: ${this.currentKeyIndex}) for Provider: ${provider.toUpperCase()}`));
             return true;
         }
 
