@@ -75,11 +75,24 @@ export class GitManager {
             }
 
             console.log(chalk.cyan(`Pushing to remote...`));
-            cp.execSync('git push', { stdio: 'inherit' });
-            console.log(chalk.green.bold(`\n✅ Successfully pushed to remote.`));
+            try {
+                cp.execSync('git push', { stdio: 'inherit' });
+                console.log(chalk.green.bold(`\n✅ Successfully pushed to remote.`));
+            } catch (pushError: any) {
+                console.log(chalk.yellow(`\n⚠ Git push failed (likely out of sync with remote). Attempting professional auto-fix (pull --rebase)...`));
+                try {
+                    cp.execSync('git pull --rebase', { stdio: 'inherit' });
+                    console.log(chalk.cyan(`Auto-merge successful. Pushing again...`));
+                    cp.execSync('git push', { stdio: 'inherit' });
+                    console.log(chalk.green.bold(`\n✅ Successfully pushed to remote after auto-fix!`));
+                } catch (rebaseError: any) {
+                    console.log(chalk.red.bold(`\n❌ Auto-fix failed. There might be merge conflicts you need to resolve manually.`));
+                    throw rebaseError;
+                }
+            }
 
         } catch (error: any) {
-            console.log(chalk.red(`\n❌ Git push failed: ${error.message}`));
+            console.log(chalk.red(`\n❌ Git operation failed: ${error.message}`));
         }
     }
 
@@ -93,7 +106,7 @@ export class GitManager {
         }
     }
 
-    public async publish() {
+    public async publish(providerOpt: string = 'gemini') {
         console.log(chalk.magenta.bold(`\n🌐 GitHub Auto-Publish Utility`));
         
         // 1. Check if GitHub CLI is installed
@@ -113,7 +126,38 @@ export class GitManager {
             cp.execSync('git init', { stdio: 'ignore' });
         }
 
-        // 3. Ask for Repository Details
+        // 3. AI Description Generation
+        console.log(chalk.cyan(`\n🧠 Analyzing project to generate the best repository description...`));
+        let aiSuggestedDesc = "An awesome project built with g-coder";
+        try {
+            // Read basic project info
+            let context = "No specific project details found. It's a standard code repository.";
+            const fs = await import('fs');
+            const path = await import('path');
+            const pkgPath = path.join(process.cwd(), 'package.json');
+            if (fs.existsSync(pkgPath)) {
+                const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+                context = `Project Name: ${pkg.name || 'unknown'}\nDescription: ${pkg.description || 'N/A'}\nDependencies: ${Object.keys(pkg.dependencies || {}).join(', ')}`;
+            } else {
+                const readmePath = path.join(process.cwd(), 'README.md');
+                if (fs.existsSync(readmePath)) {
+                    context = fs.readFileSync(readmePath, 'utf-8').substring(0, 500);
+                }
+            }
+
+            const prompt = `Based on this context, write a single, short, highly attractive 1-sentence GitHub repository description (max 120 chars). Output ONLY the description, no quotes.\n\nContext:\n${context}`;
+            const fullPrompt = buildAiPrompt('ask', prompt);
+            const res = await executeAiRequest(fullPrompt, providerOpt);
+            
+            if (res && res.trim().length > 5) {
+                aiSuggestedDesc = res.trim().replace(/^["']|["']$/g, '');
+                console.log(chalk.green(`✔ AI Suggestion: `) + chalk.white(aiSuggestedDesc));
+            }
+        } catch (e) {
+            console.log(chalk.yellow(`⚠ Could not generate AI description. Using fallback.`));
+        }
+
+        // 4. Ask for Repository Details
         const inquirer = (await import('inquirer')).default;
         const currentFolder = process.cwd().split(/[\\/]/).pop() || 'my-project';
 
@@ -127,7 +171,8 @@ export class GitManager {
             {
                 type: 'input',
                 name: 'description',
-                message: 'Enter a short description for this repository:'
+                message: 'Enter a short description for this repository:',
+                default: aiSuggestedDesc
             },
             {
                 type: 'list',

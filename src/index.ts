@@ -107,9 +107,10 @@ gitCmd
 gitCmd
   .command('publish')
   .description('Initializes a GitHub repository using gh CLI and pushes code')
-  .action(async () => {
+  .option('-p, --provider <type>', 'Preferred provider for AI generation', 'gemini')
+  .action(async (options) => {
       const manager = new GitManager();
-      await manager.publish();
+      await manager.publish(options.provider);
   });
 
 // Command: Preview
