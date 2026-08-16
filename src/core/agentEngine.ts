@@ -1,11 +1,13 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import * as cp from 'child_process';
-import inquirer from 'inquirer';
 import chalk from 'chalk';
 import ignore from 'ignore';
 import { confirmAction } from './utils';
 import { OptimizerEngine } from './optimizerEngine';
+import { PermissionProfile, PolicyEngine } from './policyEngine';
+import { CommandRunner } from './commandRunner';
+import { SandboxManager } from './sandboxManager';
+import { PatchValidator } from './patchValidator';
 
 export interface Action {
     type: 'write' | 'read' | 'delete' | 'move' | 'run' | 'patch' | 'done';
@@ -13,6 +15,10 @@ export interface Action {
     destination?: string;
     content?: string;
     command?: string;
+    executable?: string;
+    args?: string[];
+    cwd?: string;
+    timeoutMs?: number;
     patchBlock?: string;
 }
 
@@ -113,17 +119,40 @@ export class SystemAgent {
      */
     public async executeActions(
         actions: Action[],
-        onActionComplete?: (action: Action, index: number) => void
+        onActionComplete?: (action: Action, index: number) => void,
+        options: { dryRun?: boolean; nonInteractive?: boolean; permission?: PermissionProfile; sandbox?: boolean } = {}
     ): Promise<{ success: boolean, output: string }> {
         if (actions.length === 0) return { success: true, output: 'No actions to execute.' };
         const optimizer = new OptimizerEngine();
+        const policy = new PolicyEngine(this.cwd, options.permission ?? 'workspace-write');
+        const commandRunner = new CommandRunner(this.cwd);
+        const sandboxManager = new SandboxManager(this.cwd, commandRunner);
+        const patchValidator = new PatchValidator(this.cwd);
 
         console.log(chalk.blue('\n[SystemAgent] The AI wants to perform the following system actions:\n'));
 
         let executionOutput = '';
+        let hadFailure = false;
 
         let hasDangerousAction = false;
         let actionDescriptions: string[] = [];
+
+        for (const action of actions) {
+            if (action.type === 'done') continue;
+            if (action.type === 'run' && !action.executable) {
+                console.log(chalk.red('[Policy] Legacy shell command strings are prohibited. The AI must provide executable and args.'));
+                return { success: false, output: 'Policy denied an unstructured shell command.' };
+            }
+            const decision = policy.evaluate({ action: action.type as any, target: action.type === 'run' ? action.cwd : action.path, executable: action.executable, args: action.args });
+            if (!decision.allowed || (options.nonInteractive && decision.risk === 'high')) {
+                console.log(chalk.red(`[Policy] ${decision.reason}`));
+                return { success: false, output: `Policy denied ${action.type}: ${decision.reason}` };
+            }
+            if (action.type === 'move' && action.destination) {
+                const destination = policy.evaluate({ action: 'move', target: action.destination });
+                if (!destination.allowed) return { success: false, output: `Policy denied move destination: ${destination.reason}` };
+            }
+        }
 
         actions.forEach((action, idx) => {
             if (action.type === 'write') {
@@ -151,9 +180,8 @@ export class SystemAgent {
                 actionDescriptions.push(`Patch ${target}`);
                 hasDangerousAction = true;
             } else if (action.type === 'run') {
-                const displayCmd = action.command && action.command.length > 60
-                    ? action.command.substring(0, 60) + '... (script hidden for UI)'
-                    : action.command;
+                const rendered = [action.executable, ...(action.args ?? [])].join(' ');
+                const displayCmd = rendered.length > 80 ? rendered.substring(0, 80) + '...' : rendered;
                 console.log(chalk.red.bold(` ${idx + 1}. RUN COMMAND: ${displayCmd}`));
                 actionDescriptions.push(`Run command: ${displayCmd}`);
                 hasDangerousAction = true;
@@ -162,7 +190,12 @@ export class SystemAgent {
             }
         });
 
-        if (hasDangerousAction) {
+        if (options.dryRun) {
+            console.log(chalk.cyan('\n[Dry Run] Policy validation passed; no actions were executed.'));
+            return { success: true, output: 'Dry run completed without side effects.' };
+        }
+
+        if (hasDangerousAction && !options.nonInteractive) {
             console.log(chalk.red.bold(`\n⚠️ DANGER: You are about to execute modifications or system commands:`));
             actionDescriptions.forEach(desc => console.log(chalk.red(`   - ${desc}`)));
             console.log('');
@@ -172,7 +205,7 @@ export class SystemAgent {
                 console.log(chalk.yellow('Actions aborted by user. Safety first.'));
                 return { success: false, output: 'Execution aborted by user.' };
             }
-        } else {
+        } else if (!hasDangerousAction && !options.nonInteractive) {
             const isConfirmed = await confirmAction(chalk.cyan('Do you want to allow these read actions?'));
             if (!isConfirmed) {
                 console.log(chalk.yellow('Actions aborted by user.'));
@@ -223,28 +256,33 @@ export class SystemAgent {
                     executionOutput += `\n[MOVE SUCCESS] ${src} -> ${dest}`;
                     completed = true;
                 } else if (action.type === 'patch' && action.path && action.patchBlock) {
+                    const validation = patchValidator.validate(action.path, action.patchBlock);
+                    if (!validation.valid) throw new Error(`Patch policy rejected: ${validation.reason}`);
                     const patched = optimizer.applyDiffPatch(action.path, action.patchBlock);
                     if (!patched) {
+                        hadFailure = true;
                         console.log(chalk.red(`✖ Failed to apply precise diff patch to: ${action.path}`));
                         executionOutput += `\n[PATCH FAILED] Could not apply patch to ${action.path}. Ensure <<SEARCH>> block exactly matches existing file contents.`;
                     } else {
                         executionOutput += `\n[PATCH SUCCESS] ${action.path}`;
                         completed = true;
                     }
-                } else if (action.type === 'run' && action.command) {
-                    const displayCmd = action.command.length > 60
-                        ? action.command.substring(0, 60) + '...'
-                        : action.command;
+                } else if (action.type === 'run' && action.executable) {
+                    const rendered = [action.executable, ...(action.args ?? [])].join(' ');
+                    const displayCmd = rendered.length > 60 ? rendered.substring(0, 60) + '...' : rendered;
                     console.log(chalk.cyan(`► Running: ${displayCmd}`));
                     try {
-                        const out = cp.execSync(action.command, { cwd: this.cwd, encoding: 'utf-8', stdio: 'pipe' });
-                        console.log(chalk.gray(out));
+                        const structured = { executable: action.executable, args: action.args, cwd: action.cwd, timeoutMs: action.timeoutMs };
+                        const result = options.sandbox ? await sandboxManager.run(structured) : await commandRunner.run(structured);
+                        console.log(chalk.gray(result.stdout));
+                        if (result.exitCode !== 0) throw new Error(result.stderr || `Command exited with ${result.exitCode}`);
                         console.log(chalk.green(`✔ Command Success`));
-                        executionOutput += `\n[RUN CMD: ${action.command}]\nSTDOUT:\n${out}\n`;
+                        executionOutput += `\n[RUN: ${rendered}]\nSTDOUT:\n${result.stdout}\n`;
                         completed = true;
                     } catch (cmdErr: any) {
+                        hadFailure = true;
                         console.log(chalk.red(`✖ Command Failed`));
-                        executionOutput += `\n[RUN FAILED CMD: ${action.command}]\nERROR/STDERR:\n${cmdErr.message}\n${cmdErr.stderr || ''}\n`;
+                        executionOutput += `\n[RUN FAILED: ${rendered}]\nERROR:\n${cmdErr.message}\n`;
                     }
                 } else if (action.type === 'done') {
                     executionOutput += `\n[TASK DONE]`;
@@ -252,11 +290,12 @@ export class SystemAgent {
                 }
                 if (completed) onActionComplete?.(action, index);
             } catch (e: any) {
+                hadFailure = true;
                 console.error(chalk.red(`✖ Action Failed [${action.type}]: ${e.message}`));
                 executionOutput += `\n[ACTION FAILED ${action.type}] ${e.message}`;
             }
         }
         console.log(chalk.green('\nAll authorized actions completed.\n'));
-        return { success: true, output: executionOutput };
+        return { success: !hadFailure, output: executionOutput };
     }
 }

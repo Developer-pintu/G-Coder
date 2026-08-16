@@ -87,7 +87,7 @@ export class BatchEditor {
         if (executionSuccess && !noHeal) {
             const hasPackageJson = fse.existsSync(path.join(process.cwd(), 'package.json'));
             if (hasPackageJson) {
-                const buildPassed = await this.healer.verifyAndHeal(providerOpt, 'npm run build');
+                const buildPassed = await this.healer.verifyAndHeal(providerOpt);
                 if (!buildPassed) executionSuccess = false;
             }
         }

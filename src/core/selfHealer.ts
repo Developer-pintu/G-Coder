@@ -1,9 +1,9 @@
-import cp from 'child_process';
 import chalk from 'chalk';
 import ora from 'ora';
 import { executeAiRequest, buildAiPrompt } from './api';
 import { SystemAgent } from './agentEngine';
 import { EnvironmentManager } from './envManager';
+import { CommandRunner, StructuredCommand } from './commandRunner';
 
 export class SelfHealer {
     private engine: SystemAgent;
@@ -13,7 +13,7 @@ export class SelfHealer {
         this.engine = engine;
     }
 
-    public async verifyAndHeal(providerOpt: string, buildCommand: string = 'npm run build'): Promise<boolean> {
+    public async verifyAndHeal(providerOpt: string, buildCommand: StructuredCommand = { executable: process.platform === 'win32' ? 'npm.cmd' : 'npm', args: ['run', 'build'] }): Promise<boolean> {
         try {
             await new EnvironmentManager().ensure(process.cwd());
         } catch (error: any) {
@@ -21,14 +21,17 @@ export class SelfHealer {
             return false;
         }
         let attempts = 0;
+        const renderedCommand = [buildCommand.executable, ...(buildCommand.args ?? [])].join(' ');
+        const runner = new CommandRunner(process.cwd());
 
         while (attempts < this.maxRetries) {
             console.log(chalk.cyan(`\n🔧 Verifying Workspace (Attempt ${attempts + 1}/${this.maxRetries})...`));
-            const spinner = ora(`Running: ${buildCommand}`).start();
+            const spinner = ora(`Running: ${renderedCommand}`).start();
             
             try {
                 // Execute build command
-                cp.execSync(buildCommand, { cwd: process.cwd(), encoding: 'utf-8', stdio: 'pipe' });
+                const result = await runner.run(buildCommand);
+                if (result.exitCode !== 0) throw new Error(result.stderr || result.stdout || `Exit code ${result.exitCode}`);
                 spinner.succeed(chalk.green(`Verification passed! The code compiles successfully.`));
                 return true;
             } catch (error: any) {
@@ -45,7 +48,7 @@ export class SelfHealer {
                 console.log(chalk.magenta(`\n🔄 Self-Healing triggered. Asking AI to fix the error...`));
                 
                 const healInstruction = `The previous code changes caused a build error.\n` +
-                                        `Command run: ${buildCommand}\n` +
+                                        `Command run: ${renderedCommand}\n` +
                                         `Error output:\n${errorOutput}\n\n` +
                                         `Please analyze this error and provide JSON actions (write/read/run) to fix it.`;
                 

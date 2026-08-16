@@ -29,6 +29,8 @@ export const displayHelp = () => {
     console.log(chalk.green('  g-coder config --set <provider>') + chalk.white(' Securely replace keys for one provider.'));
     console.log(chalk.green('  g-coder update') + chalk.white('     Check for and install the latest verified global release.'));
     console.log(chalk.green('  g-coder env --setup') + chalk.white(' Audit and install required runtimes and project dependencies.'));
+    console.log(chalk.green('  g-coder doctor') + chalk.white('     Diagnose CLI health, credentials, Git, Docker, and state.'));
+    console.log(chalk.green('  g-coder verify') + chalk.white('     Run detected lint, test, type-check, and build pipelines.'));
     console.log(chalk.green('  g-coder run [p]') + chalk.white('    Run a single autonomous instruction (e.g., "Create a new file called math.ts").'));
     console.log(chalk.green('  g-coder ask [q]') + chalk.white('    Ask a question to the AI without giving it file-editing powers.'));
     console.log(chalk.green('  g-coder audit') + chalk.white('      Run deterministic whole-workspace security diagnostics and readiness scoring.'));

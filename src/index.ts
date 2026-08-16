@@ -25,6 +25,12 @@ import { PromptEnhancer } from './core/promptEnhancer';
 import { StateManager } from './core/stateManager';
 import { Updater } from './core/updater';
 import { EnvironmentManager } from './core/envManager';
+import { BudgetManager } from './core/budgetManager';
+import { ContextCompactor, ChatMessage } from './core/contextCompactor';
+import { Doctor } from './core/doctor';
+import { SupplyChainScanner } from './core/supplyChainScanner';
+import { VerificationPipeline } from './core/verificationPipeline';
+import { PermissionProfile } from './core/policyEngine';
 
 // 1. Load local .env (takes precedence)
 dotenv.config();
@@ -105,6 +111,28 @@ program
       console.log(chalk.gray('Run `g-coder env --setup` to install interactively.'));
   });
 
+program.command('doctor').description('Diagnose the CLI, credentials, runtime, Git, sandbox, and session state').option('--json', 'Emit machine-readable JSON').action((options) => {
+    const checks = new Doctor().run(process.cwd());
+    if (options.json) { console.log(JSON.stringify({ checks }, null, 2)); return; }
+    console.log(chalk.cyan.bold('\n🩺 G-Coder Doctor'));
+    checks.forEach(check => console.log(`${check.status === 'pass' ? '✅' : check.status === 'warn' ? '⚠️' : '❌'} ${check.name}: ${check.detail}`));
+    if (checks.some(check => check.status === 'fail')) process.exitCode = 1;
+});
+
+program.command('deps-audit').description('Scan dependency manifests for supply-chain risks').option('--json', 'Emit machine-readable JSON').action((options) => {
+    const findings = new SupplyChainScanner().scan(process.cwd());
+    if (options.json) { console.log(JSON.stringify({ findings }, null, 2)); return; }
+    findings.forEach(finding => console.log(chalk[finding.severity === 'high' ? 'red' : 'yellow'](`[${finding.severity}] ${finding.file}: ${finding.message}`)));
+    if (findings.length === 0) console.log(chalk.green('✅ No deterministic dependency risks detected.'));
+});
+
+program.command('verify').description('Run the detected multi-language verification pipeline').option('--json', 'Emit machine-readable JSON').action(async (options) => {
+    const report = await new VerificationPipeline(process.cwd()).run();
+    if (options.json) console.log(JSON.stringify(report, null, 2));
+    else report.checks.forEach(check => console.log(`${check.status === 'passed' ? '✅' : '❌'} ${check.name} (${check.durationMs}ms)`));
+    if (!report.passed) process.exitCode = 1;
+});
+
 // Command: Create (Zero-Knowledge Project Generator)
 program
   .command('create')
@@ -124,6 +152,12 @@ program
   .requiredOption('--files <paths...>', 'List of files to read and edit simultaneously')
   .option('-p, --provider <type>', 'Preferred provider', 'gemini')
   .option('--no-heal', 'Disable the self-healing build loop')
+  .option('--dry-run', 'Validate the plan and actions without side effects')
+  .option('--non-interactive', 'Disable prompts and reject high-risk actions')
+  .option('--sandbox', 'Execute structured commands in a locked-down Docker sandbox')
+  .option('--permission <profile>', 'Permission profile: read-only, workspace-write, or full', 'workspace-write')
+  .option('--max-requests <count>', 'Maximum execution-loop AI requests', value => Number.parseInt(value, 10), 10)
+  .option('--max-cost <usd>', 'Maximum estimated task cost in USD', value => Number.parseFloat(value))
   .action(async (prompt, options) => {
       const editor = new BatchEditor();
       await editor.editBatch(prompt, options.files, options.provider, options.noHeal);
@@ -304,6 +338,9 @@ program
       const planner = new Planner();
       const gitGuard = new GitGuard();
       const healer = new SelfHealer(engine);
+      const permission = String(options.permission).toLowerCase() as PermissionProfile;
+      if (!['read-only', 'workspace-write', 'full'].includes(permission)) throw new Error(`Invalid permission profile: ${options.permission}`);
+      const budget = new BudgetManager({ maxRequests: options.maxRequests, maxCostUsd: options.maxCost });
       let executionSuccess = true;
 
       try {
@@ -335,7 +372,7 @@ program
                   ? `\n\n--- PREVIOUS EXECUTION OUTPUTS ---\n${executionHistory}\n--- END PREVIOUS OUTPUTS ---\n\n` 
                   : '';
               const fullPrompt = buildAiPrompt('run', instruction + '\n\n' + mentionedFilesContext + historyContext);
-              
+              budget.consume();
               const res = await executeAiRequest(fullPrompt, options.provider);
               console.log(chalk.gray(`\n${res}\n`));
               
@@ -349,7 +386,7 @@ program
                           const generatedFile = action.type === 'write' || action.type === 'patch' ? action.path : undefined;
                           const target = action.path || action.command || '';
                           stateManager.recordStep(`${loopCount}.${index + 1}`, `${action.type}${target ? ` ${target}` : ''}`, generatedFile);
-                      });
+                      }, { dryRun: options.dryRun, nonInteractive: options.nonInteractive, permission, sandbox: options.sandbox });
                       if (result.success && result.output) {
                           executionHistory += result.output;
                       }
@@ -382,7 +419,7 @@ program
               // If the project has a package.json, we run build
               const hasPackageJson = fs.existsSync(path.join(process.cwd(), 'package.json'));
               if (hasPackageJson) {
-                 const buildPassed = await healer.verifyAndHeal(options.provider, 'npm run build');
+                 const buildPassed = await healer.verifyAndHeal(options.provider);
                  if (!buildPassed) {
                      executionSuccess = false;
                  }
@@ -446,7 +483,8 @@ program
       console.log(chalk.magenta.bold(`=== G-CODER INTERACTIVE CHAT ===`));
       console.log(chalk.gray(`Type 'exit' or 'quit' to end the session.\n`));
       
-      let chatHistory: any[] = [];
+      let chatHistory: ChatMessage[] = [];
+      const contextCompactor = new ContextCompactor();
       
       // Inject system context into the first message
       let systemContext = engine.scanWorkspace();
@@ -477,6 +515,7 @@ program
 
           chatHistory.push({ role: 'user', content: fullPrompt });
           
+          chatHistory = contextCompactor.compact(chatHistory);
           const res = await executeAiRequest(chatHistory, options.provider);
           
           console.log(chalk.green(`\nAgent:\n`) + chalk.white(res) + `\n`);
