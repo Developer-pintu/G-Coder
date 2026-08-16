@@ -29,7 +29,7 @@ export class GitManager {
                 let deletedCount = 0;
                 for (const branch of branches) {
                     try {
-                        cp.execSync(`git branch -d ${branch}`, { stdio: 'ignore' });
+                        cp.execFileSync('git', ['branch', '-d', '--', branch], { stdio: 'ignore' });
                         console.log(chalk.green(`✔ Deleted ${branch}`));
                         deletedCount++;
                     } catch (e) {
@@ -83,7 +83,8 @@ export class GitManager {
                     }
                 }
 
-                cp.execSync(`git commit -m "${commitMessage}"`, { stdio: 'inherit' });
+                const safeCommitMessage = (commitMessage || 'chore: auto-sync update').replace(/[\r\n\0]/g, ' ').trim().slice(0, 500);
+                cp.execFileSync('git', ['commit', '-m', safeCommitMessage], { stdio: 'inherit' });
             }
 
             console.log(chalk.cyan(`Pushing to remote...`));
@@ -197,8 +198,12 @@ export class GitManager {
         const isPublic = answers.visibility === 'Public';
         const visibilityFlag = isPublic ? '--public' : '--private';
         
-        // Sanitize description for CLI
-        const safeDescription = answers.description.replace(/"/g, '\\"');
+        const safeDescription = String(answers.description).replace(/[\r\n\0]/g, ' ').trim().slice(0, 350);
+        const safeRepoName = String(answers.repoName).trim();
+        if (!/^[A-Za-z0-9._-]{1,100}$/.test(safeRepoName)) {
+            console.log(chalk.red('❌ Repository name may only contain letters, numbers, dots, underscores, and hyphens.'));
+            return;
+        }
 
         console.log(chalk.cyan(`\nCreating ${answers.visibility} repository '${answers.repoName}' on GitHub and pushing code...`));
         
@@ -210,7 +215,7 @@ export class GitManager {
                 cp.execSync('git commit -m "Initial commit from g-coder"', { stdio: 'ignore' });
             }
 
-            cp.execSync(`gh repo create ${answers.repoName} -d "${safeDescription}" ${visibilityFlag} --source=. --remote=origin --push`, { stdio: 'inherit' });
+            cp.execFileSync('gh', ['repo', 'create', safeRepoName, '-d', safeDescription, visibilityFlag, '--source=.', '--remote=origin', '--push'], { stdio: 'inherit' });
             console.log(chalk.green.bold(`\n✅ Successfully published to GitHub!`));
         } catch (error: any) {
             console.log(chalk.red(`\n❌ Failed to publish repository: ${error.message}`));

@@ -33,6 +33,9 @@ G-coder is not just a chat tool; it's a complete software engineering lifecycle 
 - **🙈 Masked Credential Input:** API keys entered through the configuration wizard are masked in an interactive cross-platform password prompt and stored with restrictive file permissions.
 - **🪄 Prompt Enhancement:** Coding requests, including common Hinglish phrases, are normalized into structured, repository-aware engineering instructions before execution.
 - **💾 Stateful Resume:** Long-running tasks persist completed actions and touched files in `.g-coder-state.json`, allowing provider failover to continue without repeating finished work.
+- **🧠 Dynamic Model Registry:** OpenAI, Groq, and OpenRouter catalogs are refreshed at runtime, ranked for heavyweight coding, cached securely, and backed by offline-safe defaults.
+- **⬆️ Verified Self-Updates:** `g-coder update` verifies npm package identity and semantic versions before performing a shell-free global update.
+- **🛡️ Deterministic Deep Audit:** The entire workspace is checked for exposed secrets, unmasked input, unsafe commands, network timeouts, rejection gaps, and incomplete provider routing; `--fix` rolls back edits unless the build passes.
 
 ---
 
@@ -79,6 +82,26 @@ To securely set or replace keys for a single provider:
 
 ```bash
 g-coder config --set openai
+```
+
+### Model selection and custom providers
+
+Model selection is automatic for providers that expose model catalogs. Pin a model when reproducibility is more important than automatic discovery:
+
+```bash
+OPENAI_MODEL=gpt-4.1 g-coder run "Refactor the API layer" -p openai
+GROQ_MODEL=llama-3.3-70b-versatile g-coder ask "Explain this stack trace" -p groq
+```
+
+Generic OpenAI-compatible providers use `<PROVIDER>_API_KEYS`, `<PROVIDER>_MODEL`, and `<PROVIDER>_BASE_URL`. HTTPS is required unless `G_CODER_ALLOW_INSECURE_HTTP=true` is explicitly set for local development.
+
+### Updating and auditing
+
+```bash
+g-coder update --check   # Check the trusted npm release without installing
+g-coder update           # Safely install the verified latest global release
+g-coder audit            # Offline deterministic whole-workspace diagnostics
+g-coder audit --fix      # Generate guarded patches and keep them only if build passes
 ```
 
 - This wizard will prompt you interactively for your API keys.

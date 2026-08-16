@@ -4,6 +4,7 @@ import chalk from 'chalk';
 import { UniversalKeyRotator } from './rotator';
 import { SystemAgent } from './agentEngine';
 import { StateManager } from './stateManager';
+import { ModelRegistry } from './modelRegistry';
 
 const engine = new SystemAgent();
 
@@ -14,18 +15,19 @@ export interface ProviderConfig {
     parse: (data: any) => string;
 }
 
-const MAX_KEYS = 3;
+const modelRegistry = new ModelRegistry();
 let lastApiCallTime = 0;
 const GLOBAL_THROTTLE_MS = 2500; // 2.5 seconds minimum between API calls
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-export const getProviderConfig = (provider: string): ProviderConfig => {
+export const getProviderConfig = (providerInput: string, selectedModel?: string): ProviderConfig => {
+    const provider = providerInput.trim().toLowerCase();
+    const model = selectedModel ?? modelRegistry.getFallback(provider);
     switch (provider) {
         case 'gemini':
-            const geminiModel = process.env.GEMINI_MODEL || 'gemini-flash-latest';
             return {
-                url: (key) => `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${key}`,
+                url: (key) => `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
                 headers: () => ({ 'Content-Type': 'application/json' }),
                 payload: (messages) => ({
                     contents: messages.map(m => ({
@@ -36,49 +38,56 @@ export const getProviderConfig = (provider: string): ProviderConfig => {
                 parse: (data) => data?.candidates?.[0]?.content?.parts?.[0]?.text
             };
         case 'anthropic':
-            const anthropicModel = process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20240620';
             return {
                 url: () => `https://api.anthropic.com/v1/messages`,
                 headers: (key) => ({ 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' }),
-                payload: (messages) => ({ model: anthropicModel, max_tokens: 4096, messages }),
+                payload: (messages) => ({ model, max_tokens: 8192, messages }),
                 parse: (data) => data?.content?.[0]?.text
             };
         case 'deepseek':
-            const deepseekModel = process.env.DEEPSEEK_MODEL || 'deepseek-coder';
             return {
                 url: () => `https://api.deepseek.com/chat/completions`,
                 headers: (key) => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` }),
-                payload: (messages) => ({ model: deepseekModel, messages }),
+                payload: (messages) => ({ model, messages }),
                 parse: (data) => data?.choices?.[0]?.message?.content
             };
         case 'openai':
-            const openaiModel = process.env.OPENAI_MODEL || 'gpt-4o';
             return {
                 url: () => `https://api.openai.com/v1/chat/completions`,
                 headers: (key) => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` }),
-                payload: (messages) => ({ model: openaiModel, messages }),
+                payload: (messages) => ({ model, messages }),
                 parse: (data) => data?.choices?.[0]?.message?.content
             };
         case 'groq':
-            const groqModel = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
             return {
                 url: () => `https://api.groq.com/openai/v1/chat/completions`,
                 headers: (key) => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` }),
-                payload: (messages) => ({ model: groqModel, messages }),
+                payload: (messages) => ({ model, messages }),
                 parse: (data) => data?.choices?.[0]?.message?.content
             };
         case 'openrouter':
             return {
                 url: () => `https://openrouter.ai/api/v1/chat/completions`,
                 headers: (key) => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}`, 'HTTP-Referer': 'https://g-coder.local', 'X-Title': 'g-coder' }),
-                payload: (messages) => ({ model: "mistralai/mistral-7b-instruct:free", messages }),
+                payload: (messages) => ({ model, messages }),
                 parse: (data) => data?.choices?.[0]?.message?.content
             };
         default:
+            const envPrefix = provider.toUpperCase().replace(/-/g, '_');
+            const baseUrl = process.env[`${envPrefix}_BASE_URL`] ?? `https://api.${provider}.com/v1`;
+            let parsedBaseUrl: URL;
+            try {
+                parsedBaseUrl = new URL(baseUrl);
+                if (parsedBaseUrl.protocol !== 'https:' && process.env.G_CODER_ALLOW_INSECURE_HTTP !== 'true') {
+                    throw new Error('Only HTTPS endpoints are allowed.');
+                }
+            } catch (error: any) {
+                throw new Error(`Invalid ${provider} base URL: ${error.message}`);
+            }
             return {
-                url: () => `https://api.${provider}.com/v1/chat/completions`,
+                url: () => `${parsedBaseUrl.toString().replace(/\/$/, '')}/chat/completions`,
                 headers: (key) => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` }),
-                payload: (messages) => ({ model: "default", messages }),
+                payload: (messages) => ({ model, messages }),
                 parse: (data) => data?.choices?.[0]?.message?.content
             };
     }
@@ -138,9 +147,10 @@ export const executeAiRequest = async (promptOrMessages: string | any[], provide
     while (!success) {
         const activeProvider = rotator.getActiveProvider();
         const activeKey = rotator.getActiveKey();
-        const config = getProviderConfig(activeProvider);
+        const selectedModel = await modelRegistry.resolveModel(activeProvider, activeKey);
+        const config = getProviderConfig(activeProvider, selectedModel);
 
-        spinner.text = `Contacting ${activeProvider.toUpperCase()} API...`;
+        spinner.text = `Contacting ${activeProvider.toUpperCase()} (${selectedModel})...`;
 
         try {
             // Strict Request Throttling
@@ -155,7 +165,7 @@ export const executeAiRequest = async (promptOrMessages: string | any[], provide
             const headers = config.headers(activeKey);
             const payload = config.payload(messages, activeKey);
 
-            const response = await axios.post(url, payload, { headers });
+            const response = await axios.post(url, payload, { headers, timeout: 120000 });
             lastApiCallTime = Date.now();
 
             responseText = config.parse(response.data);

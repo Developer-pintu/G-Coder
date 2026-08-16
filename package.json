@@ -2,6 +2,10 @@
   "name": "g-coder",
   "version": "3.0.0",
   "description": "Universal Multi-Provider Autonomous AI Coding Agent CLI",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Developer-pintu/G-Coder.git"
+  },
   "main": "dist/index.js",
   "preferGlobal": true,
   "bin": {

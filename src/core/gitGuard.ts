@@ -53,7 +53,7 @@ export class GitGuard {
         const spinner = ora('Rolling back to safety checkpoint...').start();
         try {
             // Hard reset to the backup commit (which contains the user's pending changes)
-            cp.execSync(`git reset --hard ${this.backupCommitHash}`, { cwd: this.cwd, stdio: 'ignore' });
+            cp.execFileSync('git', ['reset', '--hard', this.backupCommitHash], { cwd: this.cwd, stdio: 'ignore' });
             cp.execSync('git clean -fd', { cwd: this.cwd, stdio: 'ignore' });
             
             // If the user had pending changes, soft reset HEAD~1 so they become uncommitted again
@@ -77,7 +77,7 @@ export class GitGuard {
                 // Wait, if the agent succeeded, the current HEAD is still our WIP commit + any new agent files.
                 // Since the agent doesn't commit, the new changes are uncommitted.
                 // We just do a soft reset on the WIP commit.
-                cp.execSync(`git reset --soft HEAD~1`, { cwd: this.cwd, stdio: 'ignore' });
+                cp.execFileSync('git', ['reset', '--soft', 'HEAD~1'], { cwd: this.cwd, stdio: 'ignore' });
             }
             console.log(chalk.green('✔ Git checkpoint cleaned up. Changes are ready to be reviewed.'));
         } catch (error: any) {
