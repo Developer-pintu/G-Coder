@@ -1,0 +1,45 @@
+import chalk from 'chalk';
+
+/**
+ * Displays the G-CODER ASCII Art Branding Banner.
+ * This function should be called on startup or in the help menu.
+ */
+export const displayBanner = () => {
+    const banner = `
+   ____                 _           
+  / ___|      ___ ___  | | ___ _ __ 
+ | |  _ _____/ __/ _ \\ | |/ _ \\ '__|
+ | |_| |____| (_| (_) || |  __/ |   
+  \\____|     \\___\\___/ |_|\\___|_|   
+                                    
+    `;
+    console.log(chalk.cyan.bold(banner));
+    console.log(chalk.gray('  Enterprise-Grade Autonomous AI Coding Agent (v3.0.0)'));
+    console.log(chalk.gray('  Powered by Multi-Provider AI Architecture\n'));
+};
+
+/**
+ * Displays a customized, color-coded help screen.
+ */
+export const displayHelp = () => {
+    displayBanner();
+    console.log(chalk.yellow.bold(' COMMANDS:'));
+
+    console.log(chalk.green('  g-coder chat') + chalk.white('       Start an interactive, continuous chat session with conversational memory (Recommended).'));
+    console.log(chalk.green('  g-coder config') + chalk.white('     Interactive wizard to securely configure API keys globally.'));
+    console.log(chalk.green('  g-coder run [p]') + chalk.white('    Run a single autonomous instruction (e.g., "Create a new file called math.ts").'));
+    console.log(chalk.green('  g-coder ask [q]') + chalk.white('    Ask a question to the AI without giving it file-editing powers.'));
+    console.log(chalk.green('  g-coder audit') + chalk.white('      Run an advanced static code analysis and calculate Application Readiness Score.'));
+    console.log(chalk.green('  g-coder files') + chalk.white('      Recursively list all files in the workspace (respects .gitignore).'));
+    console.log(chalk.green('  g-coder update-docs') + chalk.white(' Autonomously analyze the project and update the README.md with capabilities.'));
+    console.log(chalk.green('  g-coder help') + chalk.white('       Display this beautiful help screen.'));
+
+    console.log(chalk.yellow.bold('\n OPTIONS:'));
+    console.log(chalk.cyan('  -p, --provider') + chalk.white('    Specify the AI provider (gemini, groq, openrouter, etc.). Default is gemini.'));
+    console.log(chalk.cyan('  -f, --file') + chalk.white('        Use with "run" to pass instructions from a file.'));
+
+    console.log(chalk.magenta.bold('\n EXAMPLES:'));
+    console.log(chalk.gray('  $ g-coder chat'));
+    console.log(chalk.gray('  $ g-coder run "Refactor the rotator.ts file to use a class" -p groq'));
+    console.log(chalk.gray('  $ g-coder audit\n'));
+};
