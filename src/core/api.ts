@@ -59,7 +59,7 @@ export const getProviderConfig = (provider: string): ProviderConfig => {
                 parse: (data) => data?.choices?.[0]?.message?.content
             };
         case 'groq':
-            const groqModel = process.env.GROQ_MODEL || 'llama-3.1-70b-versatile';
+            const groqModel = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
             return {
                 url: () => `https://api.groq.com/openai/v1/chat/completions`,
                 headers: (key) => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` }),
@@ -104,15 +104,16 @@ export const buildAiPrompt = (mode: string, input: string): string => {
             `{\n` +
             `  "actions": [\n` +
             `    { "type": "read", "path": "C:/config.json" },\n` +
-            `    { "type": "write", "path": "D:/projects/app/src/index.ts", "content": "console.log('Hello');" },\n` +
+            `    { "type": "write", "path": "D:/projects/app/src/new_file.ts", "content": "console.log('Hello');" },\n` +
             `    { "type": "patch", "path": "src/utils.ts", "patchBlock": "<<SEARCH>>\\nold code\\n<<REPLACE>>\\nnew code\\n<<END>>" },\n` +
             `    { "type": "run", "command": "npm run build" },\n` +
             `    { "type": "done" }\n` +
             `  ]\n` +
             `}\n` +
             `\`\`\`\n` +
+            `CRITICAL RULE: NEVER use the 'write' action on an EXISTING file, as it will overwrite the entire file and destroy the code! You MUST use 'patch' to modify existing files. Only use 'write' for creating completely NEW files.\n` +
             `CRITICAL MULTI-TURN LOOP RULE: The system will execute your 'read' and 'run' actions and feed the exact outputs back to you in the next iteration. You can loop as many times as needed to read, think, and test. ONCE the requested task is 100% complete, you MUST output a 'done' action to exit the loop.\n` +
-            `Provide absolute or relative paths. Use precise 'patch' actions instead of full 'write' overwrites whenever possible to save tokens.`;
+            `Provide absolute or relative paths.`;
     } else {
         instruction = `You are an elite AI coding assistant. Answer the user's prompt: ${input}`;
     }
