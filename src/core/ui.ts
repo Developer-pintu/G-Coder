@@ -25,7 +25,8 @@ export const displayHelp = () => {
     console.log(chalk.yellow.bold(' COMMANDS:'));
 
     console.log(chalk.green('  g-coder chat') + chalk.white('       Start an interactive, continuous chat session with conversational memory (Recommended).'));
-    console.log(chalk.green('  g-coder config') + chalk.white('     Interactive wizard to securely configure API keys globally.'));
+    console.log(chalk.green('  g-coder config') + chalk.white('     Masked wizard to securely configure API keys globally.'));
+    console.log(chalk.green('  g-coder config --set <provider>') + chalk.white(' Securely replace keys for one provider.'));
     console.log(chalk.green('  g-coder run [p]') + chalk.white('    Run a single autonomous instruction (e.g., "Create a new file called math.ts").'));
     console.log(chalk.green('  g-coder ask [q]') + chalk.white('    Ask a question to the AI without giving it file-editing powers.'));
     console.log(chalk.green('  g-coder audit') + chalk.white('      Run an advanced static code analysis and calculate Application Readiness Score.'));

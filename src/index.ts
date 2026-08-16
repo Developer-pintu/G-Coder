@@ -23,6 +23,8 @@ import { PreviewEngine } from './core/previewEngine';
 import { SystemAgent } from './core/agentEngine';
 import { SelfHealer } from './core/selfHealer';
 import { ProjectAuditor } from './core/auditor';
+import { PromptEnhancer } from './core/promptEnhancer';
+import { StateManager } from './core/stateManager';
 
 // 1. Load local .env (takes precedence)
 dotenv.config();
@@ -157,6 +159,7 @@ program
   .argument('<instruction>', 'Instruction on what to build or change')
   .option('-p, --provider <type>', 'Preferred provider', 'gemini')
   .action(async (instruction, options) => {
+      instruction = new PromptEnhancer().enhance(instruction).enhanced;
       const fullPrompt = buildAiPrompt('edit', instruction);
       const res = await executeAiRequest(fullPrompt, options.provider);
       
@@ -373,6 +376,11 @@ program
           process.exit(1);
       }
 
+      const originalInstruction = instruction;
+      instruction = new PromptEnhancer().enhance(instruction).enhanced;
+      const stateManager = new StateManager();
+      stateManager.start(originalInstruction, instruction);
+
       const planner = new Planner();
       const gitGuard = new GitGuard();
       const healer = new SelfHealer(engine);
@@ -382,6 +390,7 @@ program
           // 1. Planner Phase
           const isPlanApproved = await planner.createAndConfirmPlan(instruction, options.provider);
           if (!isPlanApproved) {
+              stateManager.fail('Execution plan was rejected by the user.');
               process.exit(0);
           }
 
@@ -413,7 +422,11 @@ program
                   const hasDone = actions.some(a => a.type === 'done');
                   
                   try {
-                      const result = await engine.executeActions(actions);
+                      const result = await engine.executeActions(actions, (action, index) => {
+                          const generatedFile = action.type === 'write' || action.type === 'patch' ? action.path : undefined;
+                          const target = action.path || action.command || '';
+                          stateManager.recordStep(`${loopCount}.${index + 1}`, `${action.type}${target ? ` ${target}` : ''}`, generatedFile);
+                      });
                       if (result.success && result.output) {
                           executionHistory += result.output;
                       }
@@ -460,9 +473,11 @@ program
 
       // 5. Cleanup or Rollback
       if (executionSuccess) {
+          stateManager.complete();
           gitGuard.cleanup();
           console.log(chalk.green.bold(`\n✅ Autonomous task completed successfully!`));
       } else {
+          stateManager.fail('Autonomous execution failed or was rejected.');
           console.log(chalk.red.bold(`\n❌ Task failed.`));
           gitGuard.rollback();
       }
@@ -493,8 +508,9 @@ program
 program
   .command('config')
   .description('Interactive wizard to securely configure API keys globally')
-  .action(async () => {
-      await runConfigWizard();
+  .option('--set <provider>', 'Securely set or replace API keys for one provider')
+  .action(async (options) => {
+      await runConfigWizard(options.set);
   });
 
 // Command: Chat (Interactive Repl)

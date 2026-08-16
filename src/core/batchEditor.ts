@@ -6,6 +6,8 @@ import { SystemAgent } from './agentEngine';
 import { Planner } from './planner';
 import { GitGuard } from './gitGuard';
 import { SelfHealer } from './selfHealer';
+import { PromptEnhancer } from './promptEnhancer';
+import { StateManager } from './stateManager';
 
 export class BatchEditor {
     private engine: SystemAgent;
@@ -22,6 +24,10 @@ export class BatchEditor {
 
     public async editBatch(prompt: string, files: string[], providerOpt: string, noHeal: boolean = false) {
         console.log(chalk.magenta.bold(`\n📚 Initializing Batch Multi-File Editor...`));
+        const originalPrompt = prompt;
+        prompt = new PromptEnhancer().enhance(prompt).enhanced;
+        const stateManager = new StateManager();
+        stateManager.start(originalPrompt, prompt);
         
         let batchContext = `The user wants to edit the following files atomically based on this prompt: "${prompt}"\n\n`;
         
@@ -55,7 +61,11 @@ export class BatchEditor {
 
         if (actions.length > 0) {
             try {
-                await this.engine.executeActions(actions);
+                const result = await this.engine.executeActions(actions, (action, index) => {
+                    const generatedFile = action.type === 'write' || action.type === 'patch' ? action.path : undefined;
+                    stateManager.recordStep(`batch.${index + 1}`, `${action.type} ${action.path || action.command || ''}`.trim(), generatedFile);
+                });
+                if (!result.success) executionSuccess = false;
             } catch (e: any) {
                 console.log(chalk.red(`Execution Error: ${e.message}`));
                 executionSuccess = false;
@@ -75,9 +85,11 @@ export class BatchEditor {
 
         // 5. Atomic Cleanup/Rollback
         if (executionSuccess) {
+            stateManager.complete();
             this.gitGuard.cleanup();
             console.log(chalk.green.bold(`\n✅ Atomic Batch Edit completed successfully!`));
         } else {
+            stateManager.fail('Atomic batch execution failed or was rejected.');
             console.log(chalk.red.bold(`\n❌ Batch task failed or rejected. Rolling back all files.`));
             this.gitGuard.rollback();
         }

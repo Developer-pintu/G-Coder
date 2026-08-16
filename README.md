@@ -30,6 +30,9 @@ G-coder is not just a chat tool; it's a complete software engineering lifecycle 
 - **🌐 AI Git Operations:** Run `g-coder git push` to let the AI analyze your code changes and automatically write a professional `Conventional Commit` message. Or use `g-coder git publish` to automatically bootstrap a new GitHub repository from your terminal.
 - **🕵️ Model Scout:** An intelligent background engine that constantly pings global registries to notify you the moment a new AI model drops.
 - **🔑 Secure Key Rotator:** Your keys are kept completely safe in a hidden global folder (`~/.g-coder/.env`), completely avoiding accidental git leaks.
+- **🙈 Masked Credential Input:** API keys entered through the configuration wizard are masked in an interactive cross-platform password prompt and stored with restrictive file permissions.
+- **🪄 Prompt Enhancement:** Coding requests, including common Hinglish phrases, are normalized into structured, repository-aware engineering instructions before execution.
+- **💾 Stateful Resume:** Long-running tasks persist completed actions and touched files in `.g-coder-state.json`, allowing provider failover to continue without repeating finished work.
 
 ---
 
@@ -72,8 +75,15 @@ Run the built-in Secure Configuration Wizard anywhere in your terminal:
 g-coder config
 ```
 
+To securely set or replace keys for a single provider:
+
+```bash
+g-coder config --set openai
+```
+
 - This wizard will prompt you interactively for your API keys.
 - The keys are securely written to a hidden global directory on your machine (`~/.g-coder/.env`).
+- Interactive credentials are masked and are never printed by g-coder.
 - G-coder automatically bootstraps these keys from your home directory no matter which project folder you are working in!
 
 ---

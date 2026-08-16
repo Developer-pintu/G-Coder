@@ -3,6 +3,7 @@ import ora from 'ora';
 import chalk from 'chalk';
 import { UniversalKeyRotator } from './rotator';
 import { SystemAgent } from './agentEngine';
+import { StateManager } from './stateManager';
 
 const engine = new SystemAgent();
 
@@ -129,7 +130,7 @@ export const executeAiRequest = async (promptOrMessages: string | any[], provide
     let responseText = "";
     const spinner = ora('Agent is thinking...').start();
 
-    const messages = typeof promptOrMessages === 'string' ? [{ role: 'user', content: promptOrMessages }] : promptOrMessages;
+    let messages = typeof promptOrMessages === 'string' ? [{ role: 'user', content: promptOrMessages }] : [...promptOrMessages];
 
     let keyRetryCount = 0;
     const MAX_KEY_RETRIES = 3;
@@ -193,6 +194,13 @@ export const executeAiRequest = async (promptOrMessages: string | any[], provide
                 if (!rotated) {
                     throw new Error('\n[Fatal Error] Queue exhausted. All configured providers and API keys have failed.');
                 } else {
+                    try {
+                        const resumePrompt = new StateManager().recordHandoff(activeProvider, reason);
+                        messages = [...messages, { role: 'user', content: resumePrompt }];
+                        console.log(chalk.cyan('[State] Resume context loaded; completed work will not be repeated.'));
+                    } catch {
+                        // Calls outside a stateful task continue without resume context.
+                    }
                     keyRetryCount = 0; // Reset for the next key
                     spinner.start('Retrying with fallback...');
                 }
