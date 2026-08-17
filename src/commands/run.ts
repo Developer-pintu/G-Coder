@@ -42,6 +42,7 @@ export const registerrunCommand = (program: Command, engine: SystemAgent, CLI_VE
       .option('--dry-run', 'Validate the plan and actions without side effects', config.dryRun ?? false)
       .option('--non-interactive', 'Disable prompts and reject high-risk actions', config.nonInteractive ?? false)
       .option('--sandbox', 'Execute structured commands in a locked-down Docker sandbox', config.sandbox ?? false)
+      .option('--role <type>', 'Persona role (architect, designer, qa)', config.role ?? 'architect')
       .option('--permission <profile>', 'Permission profile: read-only, workspace-write, or full', config.permission ?? 'workspace-write')
       .option('--max-requests <count>', 'Maximum execution-loop AI requests', value => Number.parseInt(value, 10), config.maxRequests ?? 10)
       .option('--max-cost <usd>', 'Maximum estimated task cost in USD', value => Number.parseFloat(value), config.maxCost)
@@ -104,7 +105,7 @@ export const registerrunCommand = (program: Command, engine: SystemAgent, CLI_VE
                   const historyContext = executionHistory 
                       ? `\n\n--- PREVIOUS EXECUTION OUTPUTS ---\n${executionHistory}\n--- END PREVIOUS OUTPUTS ---\n\n` 
                       : '';
-                  const fullPrompt = buildAiPrompt('run', instruction + '\n\n' + mentionedFilesContext + historyContext);
+                  const fullPrompt = buildAiPrompt('run', instruction + '\n\n' + mentionedFilesContext + historyContext, options.role);
                   budget.consume();
                   const res = await executeAiRequest(fullPrompt, options.provider);
                   console.log(chalk.gray(`\n${res}\n`));

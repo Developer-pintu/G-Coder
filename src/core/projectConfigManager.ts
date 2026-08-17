@@ -10,6 +10,7 @@ export interface ProjectConfig {
     dryRun?: boolean;
     noHeal?: boolean;
     nonInteractive?: boolean;
+    role?: string;
 }
 
 export const loadProjectConfig = (): ProjectConfig => {

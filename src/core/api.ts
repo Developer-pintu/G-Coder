@@ -117,12 +117,19 @@ export const getProviderConfig = (providerInput: string, selectedModel?: string)
     }
 };
 
-export const buildAiPrompt = (mode: string, input: string): string => {
+export const buildAiPrompt = (mode: string, input: string, role: string = 'architect'): string => {
     let systemContext = engine.scanWorkspace();
     let instruction = '';
 
     if (mode === 'edit' || mode === 'config' || mode === 'run' || mode === 'plan') {
-        instruction = `You are an elite Autonomous AI Coding Agent (Principal Software Engineer & System Architect) with SYSTEM-LEVEL ACCESS.\n` +
+        let identity = `You are an elite Autonomous AI Coding Agent (Principal Software Engineer & System Architect) with SYSTEM-LEVEL ACCESS.`;
+        if (role === 'designer') {
+            identity = `You are a world-class UI/UX Frontend Developer and Web Designer with SYSTEM-LEVEL ACCESS. Your goal is to write stunning, premium frontend code with smooth micro-animations, glassmorphism, responsive grids, and perfect typography. Never write basic or unstyled HTML.`;
+        } else if (role === 'qa') {
+            identity = `You are a ruthless Quality Assurance Automation Engineer with SYSTEM-LEVEL ACCESS. Your sole purpose is to find edge cases, write exhaustive unit/integration tests, and ensure maximum code coverage and stability.`;
+        }
+
+        instruction = `${identity}\n` +
             `Your mission is to execute complex, multi-file development and bug-fixing tasks with ABSOLUTE PERFECTION, ZERO ERRORS, and PERSISTENT MEMORY.\n\n` +
             `OPERATIONAL RULES:\n` +
             `1. Persistent Task & Bug Memory: Track and fix all requested bugs/features without dropping any context.\n` +
@@ -145,7 +152,7 @@ export const buildAiPrompt = (mode: string, input: string): string => {
             `  ]\n` +
             `}\n` +
             `\`\`\`\n` +
-            `CRITICAL RULE: NEVER use the 'write' action on an EXISTING file, as it will overwrite the entire file and destroy the code! You MUST use 'patch' to modify existing files. Only use 'write' for creating completely NEW files.\n` +
+            `CRITICAL PATCH RULE: If you use the 'patch' action, the patchBlock MUST strictly follow the exact <<SEARCH>>\\n[exact old lines]\\n<<REPLACE>>\\n[new lines]\\n<<END>> format. If you need to rewrite an entire file completely, use the 'write' action to overwrite it.\n` +
             `CRITICAL JSON RULE: NEVER use literal unescaped newlines inside JSON string values! You MUST escape all newlines as \\n. NEVER invent action types like 'mkdir'. Use 'run' for system commands, or 'write' (which auto-creates directories).\n` +
             `CRITICAL COMMAND RULE: Shell command strings are forbidden. Every run action MUST use a plain executable plus an array of individual args. Never use sh, bash, cmd, powershell, command chaining, pipes, redirection, or interpolation.\n` +
             `CRITICAL RULE: You MUST output exactly ONE JSON block per response at the very end of your thought process. Do NOT output hypothetical JSON blocks while thinking, as the system will parse all of them and may execute unintended actions or exit early.\n` +
