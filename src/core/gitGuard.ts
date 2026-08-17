@@ -28,7 +28,7 @@ export class GitGuard {
 
         const spinner = ora('Creating Git safety checkpoint...').start();
         try {
-            const status = cp.execSync('git status --porcelain', { cwd: this.cwd, encoding: 'utf-8' });
+            const status = cp.execSync('git status --porcelain', { cwd: this.cwd, encoding: 'utf-8', maxBuffer: 1024 * 1024 * 50 });
             if (status.trim() === '') {
                 // If clean, we don't need a WIP commit, we just remember the current HEAD
                 this.backupCommitHash = cp.execSync('git rev-parse HEAD', { cwd: this.cwd, encoding: 'utf-8' }).trim();

@@ -50,7 +50,7 @@ export class GitManager {
         try {
             // Check if there are changes to commit
             cp.execSync('git add .', { stdio: 'ignore' });
-            const status = cp.execSync('git status --porcelain', { encoding: 'utf-8' });
+            const status = cp.execSync('git status --porcelain', { encoding: 'utf-8', maxBuffer: 1024 * 1024 * 50 });
             
             let commitMessage = messageOpt;
 
@@ -59,7 +59,7 @@ export class GitManager {
             } else {
                 if (!commitMessage) {
                     console.log(chalk.cyan(`Analyzing git diff to generate an AI commit message...`));
-                    const diff = cp.execSync('git diff --cached', { encoding: 'utf-8' });
+                    const diff = cp.execSync('git diff --cached', { encoding: 'utf-8', maxBuffer: 1024 * 1024 * 50 });
                     
                     if (diff.trim().length > 0) {
                         try {
@@ -209,7 +209,7 @@ export class GitManager {
         
         try {
             // Check if there are initial commits, if not commit them
-            const status = cp.execSync('git status --porcelain', { encoding: 'utf-8' });
+            const status = cp.execSync('git status --porcelain', { encoding: 'utf-8', maxBuffer: 1024 * 1024 * 50 });
             if (status.trim() !== '') {
                 cp.execSync('git add .', { stdio: 'ignore' });
                 cp.execSync('git commit -m "Initial commit from g-coder"', { stdio: 'ignore' });
