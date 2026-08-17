@@ -35,6 +35,16 @@ import { registerDebugCommand } from './debug';
 import { registerOfflineCommand } from './offline';
 import { registerMatrixCommand } from './matrix';
 import { registerRedTeamCommand } from './redteam';
+import { registerWatchCommand } from './watch';
+import { registerSwarmDebugCommand } from './swarm-debug';
+import { registerTestsCommand } from './tests';
+import { registerMigrateCommand } from './migrate';
+import { registerPredictCommand } from './predict';
+import { registerHologramCommand } from './hologram';
+import { registerChaosCommand } from './chaos';
+import { registerMemoryCommand } from './memory';
+import { registerMorphCommand } from './morph';
+import { registerTrainCommand } from './train';
 
 export const registerAllCommands = (program: Command, engine: SystemAgent, CLI_VERSION: string) => {
     registerclearCommand(program, engine, CLI_VERSION);
@@ -71,4 +81,14 @@ export const registerAllCommands = (program: Command, engine: SystemAgent, CLI_V
     registerOfflineCommand(program);
     registerMatrixCommand(program);
     registerRedTeamCommand(program);
+    registerWatchCommand(program);
+    registerSwarmDebugCommand(program);
+    registerTestsCommand(program);
+    registerMigrateCommand(program);
+    registerPredictCommand(program);
+    registerHologramCommand(program);
+    registerChaosCommand(program);
+    registerMemoryCommand(program);
+    registerMorphCommand(program);
+    registerTrainCommand(program);
 };

@@ -22,11 +22,30 @@ export class EnvAuditor {
     };
 
     /**
-     * Scans the host machine for required binaries and runtimes.
-     * @param required List of required dependency names (e.g., ['python', 'node']).
-     * @param domain Optional domain context for logging.
-     * @returns True if all dependencies are satisfied (or successfully installed).
+     * Autonomously scans project requirements (package.json, Cargo.toml, requirements.txt)
+     * and probes the host OS for missing runtimes or compilers.
      */
+    public static async autonomousScanAndInstall(): Promise<boolean> {
+        console.log(chalk.blue(`\n🔍 [Env Auditor] Scanning project for runtime requirements...`));
+        const required: string[] = [];
+        
+        if (require('fs').existsSync('package.json')) {
+            console.log(chalk.gray(`Detected Node.js project.`));
+            required.push('node', 'npm');
+        }
+        if (require('fs').existsSync('requirements.txt')) {
+            console.log(chalk.gray(`Detected Python project.`));
+            required.push('python', 'pip');
+        }
+        if (require('fs').existsSync('Cargo.toml')) {
+            console.log(chalk.gray(`Detected Rust project.`));
+            required.push('rustc');
+        }
+        
+        if (required.length === 0) return true;
+        return this.checkDependencies(required, 'Autonomous Project Stack');
+    }
+
     public static async checkDependencies(required: string[], domain: string = 'General'): Promise<boolean> {
         console.log(chalk.blue(`\n🔍 [g-coder]: Auditing runtime environment for ${domain}...`));
         

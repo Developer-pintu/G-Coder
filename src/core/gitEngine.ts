@@ -13,7 +13,6 @@ export class GitEngine {
     public async push(messageOpt: string | undefined, providerOpt: string) {
         console.log(chalk.magenta.bold(`\n🚀 Autonomous Git Auto-Pilot`));
         try {
-            // Check for changes
             cp.execSync('git add .', { stdio: 'ignore' });
             const status = cp.execSync('git status --porcelain', { encoding: 'utf-8', maxBuffer: 1024 * 1024 * 50 });
 
@@ -28,9 +27,7 @@ export class GitEngine {
 
                     if (diff.trim().length > 0) {
                         try {
-                            // Truncate to save tokens (keep only the first 2500 chars which is usually enough for a summary)
                             const truncatedDiff = diff.substring(0, 2500) + (diff.length > 2500 ? '\n...[DIFF TRUNCATED]' : '');
-                            
                             const prompt = `Generate a single, short, professional conventional commit message (e.g., "feat: implement secure input masking" or "fix: handle 429 rate limit") for the following git diff. Do not include quotes, explanations, or backticks.\n\nDiff:\n${truncatedDiff}`;
                             const fullPrompt = buildAiPrompt('ask', prompt);
                             
@@ -45,7 +42,6 @@ export class GitEngine {
                         commitMessage = "chore: auto-sync update";
                     }
 
-                    // Interactive Hybrid Mode
                     const answers = await inquirer.prompt([
                         {
                             type: 'list',
@@ -89,6 +85,41 @@ export class GitEngine {
 
         } catch (error: any) {
             console.log(chalk.red(`\n❌ Git operation failed: ${error.message}`));
+        }
+    }
+
+    /**
+     * Elite Auto-Pilot: Autonomously adds, diffs, generates commit msg, and pushes.
+     */
+    public async autoPilot(provider: string) {
+        console.log(chalk.magenta.bold(`\n✈️  [Git Auto-Pilot] Engaging Autonomous Version Control...`));
+        try {
+            cp.execSync('git add .', { stdio: 'ignore' });
+            const diff = cp.execSync('git diff --cached', { encoding: 'utf8' });
+            
+            if (!diff.trim()) {
+                console.log(chalk.yellow(`⚠ No staged changes detected by Auto-Pilot.`));
+                return;
+            }
+
+            console.log(chalk.gray(`[Auto-Pilot] Analyzing diffs & generating semantic commit...`));
+            const prompt = `Act as a Senior Engineer. Analyze this Git diff and write a professional, concise, semantic commit message (e.g. 'feat: added auth').
+Output ONLY the raw commit message. No markdown.
+Diff:
+${diff.substring(0, 3000)}`;
+            
+            const aiMsg = await executeAiRequest(buildAiPrompt('run', prompt, 'architect'), provider);
+            const cleanMsg = aiMsg.replace(/["']/g, '').trim();
+
+            console.log(chalk.cyan(`Committing: "${cleanMsg}"`));
+            cp.execSync(`git commit -m "${cleanMsg}"`, { stdio: 'ignore' });
+            
+            console.log(chalk.gray(`[Auto-Pilot] Pushing to remote...`));
+            cp.execSync('git push', { stdio: 'ignore' });
+            
+            console.log(chalk.green.bold(`✅ Auto-Pilot complete! Changes are live.`));
+        } catch (e: any) {
+            console.error(chalk.red(`❌ Auto-Pilot encountered an error: ${e.message}`));
         }
     }
 
