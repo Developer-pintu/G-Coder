@@ -24,6 +24,7 @@
     "cross-spawn": "^7.0.6",
     "dotenv": "^16.4.5",
     "fs-extra": "^11.4.0",
+    "glob": "^13.0.6",
     "ignore": "^7.0.6",
     "inquirer": "^8.2.6",
     "ora": "^5.4.1",
@@ -33,6 +34,7 @@
   "devDependencies": {
     "@types/cross-spawn": "^6.0.6",
     "@types/fs-extra": "^11.0.4",
+    "@types/glob": "^8.1.0",
     "@types/inquirer": "^8.2.10",
     "@types/node": "^20.14.9",
     "@types/puppeteer": "^5.4.7",

@@ -45,6 +45,8 @@ import { registerChaosCommand } from './chaos';
 import { registerMemoryCommand } from './memory';
 import { registerMorphCommand } from './morph';
 import { registerTrainCommand } from './train';
+import { registerHuntCommand } from './hunt';
+import { registerFortifyCommand } from './fortify';
 
 export const registerAllCommands = (program: Command, engine: SystemAgent, CLI_VERSION: string) => {
     registerclearCommand(program, engine, CLI_VERSION);
@@ -91,4 +93,6 @@ export const registerAllCommands = (program: Command, engine: SystemAgent, CLI_V
     registerMemoryCommand(program);
     registerMorphCommand(program);
     registerTrainCommand(program);
+    registerHuntCommand(program);
+    registerFortifyCommand(program);
 };

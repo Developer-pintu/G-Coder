@@ -1,13 +1,15 @@
 import { Command } from 'commander';
-import { CicdHealer } from '../core/cicdHealer';
+import { TestHealer } from '../core/testHealer';
 
 export const registerHealCommand = (program: Command) => {
     program
-        .command('heal <log_file>')
-        .description('Auto-Healing CI/CD: Analyze a failed pipeline log and auto-fix the code')
-        .option('-p, --provider <provider>', 'Specify AI Provider', 'gemini')
-        .action(async (logFile: string, options) => {
-            const healer = new CicdHealer();
-            await healer.healPipeline(logFile, options.provider);
+        .command('heal')
+        .description('Self-Healing Test Simulator: runs tests and patches code until green')
+        .option('-c, --cmd <command>', 'Test command to run', 'npm test')
+        .option('-p, --provider <provider>', 'AI provider to use', 'gemini')
+        .option('-m, --max <number>', 'Maximum healing cycles', '3')
+        .action(async (options) => {
+            const healer = new TestHealer();
+            await healer.autoHealTests(options.cmd, options.provider, parseInt(options.max, 10));
         });
 };
