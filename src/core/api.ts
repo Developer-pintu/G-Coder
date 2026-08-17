@@ -40,8 +40,32 @@ export const getProviderConfig = (providerInput: string, selectedModel?: string)
         case 'anthropic':
             return {
                 url: () => `https://api.anthropic.com/v1/messages`,
-                headers: (key) => ({ 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' }),
-                payload: (messages) => ({ model, max_tokens: 8192, messages }),
+                headers: (key) => ({ 
+                    'Content-Type': 'application/json', 
+                    'x-api-key': key, 
+                    'anthropic-version': '2023-06-01',
+                    'anthropic-beta': 'prompt-caching-2024-07-31'
+                }),
+                payload: (messages) => ({ 
+                    model, 
+                    max_tokens: 8192, 
+                    messages: messages.map((m: any, idx: number) => {
+                        // Apply ephemeral caching to the most recent message (often containing the massive context)
+                        if (idx === messages.length - 1) {
+                            return {
+                                role: m.role,
+                                content: [
+                                    {
+                                        type: 'text',
+                                        text: m.content,
+                                        cache_control: { type: 'ephemeral' }
+                                    }
+                                ]
+                            };
+                        }
+                        return m;
+                    })
+                }),
                 parse: (data) => data?.content?.[0]?.text
             };
         case 'deepseek':

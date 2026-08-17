@@ -41,7 +41,6 @@ export class SystemAgent {
      */
     public scanWorkspace(): string {
         let structure = '';
-        let pkgContext = '';
         try {
             const ig = ignore();
             const gitignorePath = path.join(this.cwd, '.gitignore');
@@ -55,15 +54,10 @@ export class SystemAgent {
             structure = items.filter(i => {
                 try { return !ig.ignores(i); } catch (e) { return true; }
             }).join(', ');
-
-            const pkgPath = path.join(this.cwd, 'package.json');
-            if (fse.existsSync(pkgPath)) {
-                pkgContext = `\npackage.json Snippet: ${fse.readFileSync(pkgPath, 'utf8').substring(0, 500)}...`;
-            }
         } catch (e) {
             structure = 'Failed to read directory.';
         }
-        return `Current Workspace: ${this.cwd}\nFiles: ${structure}${pkgContext}\n`;
+        return `Current Workspace: ${this.cwd}\nDirectory Tree: ${structure}\n`;
     }
 
     /**
@@ -71,26 +65,7 @@ export class SystemAgent {
      * Supports absolute paths.
      */
     public readMentionedFiles(prompt: string): string {
-        // Broad regex to catch absolute windows paths like C:/foo or relative ./foo
-        const pathRegex = /(?:[A-Za-z]:[\\/]|(?:\.?\/?[\w-]+\/)*)[\w-]+\.\w+/gi;
-        const matches = prompt.match(pathRegex) || [];
-
-        let fileContexts = '';
-        const uniquePaths = [...new Set(matches)];
-
-        for (const p of uniquePaths) {
-            const absolutePath = this.resolvePath(p);
-            if (fse.existsSync(absolutePath) && fse.statSync(absolutePath).isFile()) {
-                try {
-                    const content = fse.readFileSync(absolutePath, 'utf8');
-                    fileContexts += `\n--- Contents of ${absolutePath} ---\n${content}\n------------------------\n`;
-                } catch (e) {
-                    // skip
-                }
-            }
-        }
-
-        return fileContexts;
+        return ''; // Disabled to enforce lazy loading (tool calling) and reduce token waste
     }
 
     /**
