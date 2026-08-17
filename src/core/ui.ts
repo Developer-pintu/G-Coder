@@ -33,6 +33,10 @@ export const displayHelp = () => {
     console.log(chalk.green('  g-coder verify') + chalk.white('     Run detected lint, test, type-check, and build pipelines.'));
     console.log(chalk.green('  g-coder run [p]') + chalk.white('    Run a single autonomous instruction (e.g., "Create a new file called math.ts").'));
     console.log(chalk.green('  g-coder ask [q]') + chalk.white('    Ask a question to the AI without giving it file-editing powers.'));
+    console.log(chalk.green('  g-coder swarm <goal>') + chalk.white(' Trigger multi-agent swarm (Architect -> Dev -> QA -> Security).'));
+    console.log(chalk.green('  g-coder vision <img_path> <prompt>') + chalk.white(' Image-to-Code generator (React/Tailwind from mockup).'));
+    console.log(chalk.green('  g-coder scout <url>') + chalk.white(' Autonomously browse docs to extract up-to-date context.'));
+    console.log(chalk.green('  g-coder pr <branch>') + chalk.white(' Push branch, auto-generate AI PR summary, and create PR via gh CLI.'));
     console.log(chalk.green('  g-coder audit') + chalk.white('      Run deterministic whole-workspace security diagnostics and readiness scoring.'));
     console.log(chalk.green('  g-coder files') + chalk.white('      Recursively list all files in the workspace (respects .gitignore).'));
     console.log(chalk.green('  g-coder update-docs') + chalk.white(' Autonomously analyze the project and update the README.md with capabilities.'));

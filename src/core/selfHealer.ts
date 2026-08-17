@@ -47,10 +47,10 @@ export class SelfHealer {
 
                 console.log(chalk.magenta(`\n🔄 Self-Healing triggered. Asking AI to fix the error...`));
                 
-                const healInstruction = `The previous code changes caused a build error.\n` +
+                const healInstruction = `The execution of the following command failed.\n` +
                                         `Command run: ${renderedCommand}\n` +
                                         `Error output:\n${errorOutput}\n\n` +
-                                        `Please analyze this error and provide JSON actions (write/read/run) to fix it.`;
+                                        `Please analyze this error and provide JSON actions (write/read/run/patch) to fix it.`;
                 
                 const fullPrompt = buildAiPrompt('run', healInstruction);
                 const res = await executeAiRequest(fullPrompt, providerOpt);

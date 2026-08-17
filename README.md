@@ -21,6 +21,10 @@ Welcome to **g-coder**, the ultimate universal, multi-provider AI coding assista
 
 G-coder is not just a chat tool; it's a complete software engineering lifecycle agent.
 
+- **🐝 Multi-Agent Swarm (`g-coder swarm`):** Dynamically coordinates 4 specialized AI personas (Architect, Developer, QA, Security) to build complex projects autonomously.
+- **👁️ Image-to-Code Vision (`g-coder vision`):** Provide a local image mockup and let Vision AI generate pixel-perfect React/Tailwind code.
+- **🌐 Autonomous Doc Scout (`g-coder scout`):** Automatically browse headless URLs to extract documentation context, ensuring the AI never hallucinates outdated APIs.
+- **🔁 Auto-PR Creator (`g-coder pr`):** Push your branch, generate an AI PR summary from `git diff`, and automatically open a Pull Request via GitHub CLI.
 - **🤖 Zero-Knowledge Project Generator:** Run `g-coder create <prompt>` to generate an entire application (frontend, backend, database) from scratch, complete with automated dependency installation.
 - **⚡ Precise Diff-Patching (Smart Token Optimizer):** Replaces full-file overwrites with lightweight `<<SEARCH>>` and `<<REPLACE>>` diff blocks to massively reduce token usage and bypass API limits seamlessly.
 - **⏱️ API Request Throttling & Backoff:** Implements strict request delays (2.5s) and dynamic exponential backoffs (5s, 10s, 15s) to guarantee high-performance execution without triggering `429 Too Many Requests` or `503 Server Overload` limits.
@@ -195,6 +199,14 @@ Automate your GitHub workflow using AI.
 g-coder git publish   # Autonomously creates a GitHub repo, writes a description, and pushes!
 g-coder git push      # Analyzes your code diff and writes a commit message automatically.
 g-coder git cleanup   # Safely sweeps away old branches.
+```
+
+### 💼 Enterprise Agent Commands
+```bash
+g-coder swarm [goal]                  # Run a full team of virtual AI Agents (Architect, Dev, QA, Security)
+g-coder vision [image_path] [prompt]  # Generate UI code from an image or mockup using Vision AI
+g-coder scout [url]                   # Autonomously scrape and read docs from the web
+g-coder pr [branch]                   # Autonomously create a Pull Request with an AI summary
 ```
 
 ### 🤖 Core Agent Commands

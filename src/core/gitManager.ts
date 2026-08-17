@@ -221,4 +221,52 @@ export class GitManager {
             console.log(chalk.red(`\n❌ Failed to publish repository: ${error.message}`));
         }
     }
+
+    public async createPullRequest(branchName: string, providerOpt: string = 'gemini') {
+        console.log(chalk.magenta.bold(`\n🔁 GitHub Auto-PR Creator`));
+
+        // 1. Check if GitHub CLI is installed
+        try {
+            cp.execSync('gh --version', { stdio: 'ignore' });
+        } catch (e) {
+            console.log(chalk.red.bold(`❌ GitHub CLI ('gh') is not installed.`));
+            console.log(chalk.yellow(`Please install it from https://cli.github.com/ and run 'gh auth login' first.`));
+            return;
+        }
+
+        try {
+            // Push the branch first
+            console.log(chalk.cyan(`Pushing branch '${branchName}' to remote...`));
+            cp.execSync(`git push -u origin ${branchName}`, { stdio: 'ignore' });
+
+            // Generate PR summary using AI
+            console.log(chalk.cyan(`🧠 Analyzing diffs to generate PR summary...`));
+            const diff = cp.execSync(`git diff main...${branchName}`, { encoding: 'utf-8', maxBuffer: 1024 * 1024 * 50 });
+            
+            let prTitle = `Auto-generated PR for ${branchName}`;
+            let prBody = `This PR contains changes pushed to ${branchName}.`;
+
+            if (diff.trim().length > 0) {
+                const prompt = `Based on the following git diff, generate a title and body for a GitHub Pull Request. Format your output exactly as:\nTITLE: <title>\nBODY: <body>\n\nDiff:\n${diff.substring(0, 4000)}`;
+                const fullPrompt = buildAiPrompt('ask', prompt);
+                const res = await executeAiRequest(fullPrompt, providerOpt);
+                
+                const match = res.match(/TITLE:\s*(.*?)\nBODY:\s*([\s\S]*)/i);
+                if (match) {
+                    prTitle = match[1].trim();
+                    prBody = match[2].trim();
+                    console.log(chalk.green(`✔ AI generated PR details successfully.`));
+                }
+            }
+
+            // Create PR using gh CLI
+            console.log(chalk.cyan(`Opening Pull Request via gh CLI...`));
+            cp.execFileSync('gh', ['pr', 'create', '--title', prTitle, '--body', prBody, '--base', 'main', '--head', branchName], { stdio: 'inherit' });
+            
+            console.log(chalk.green.bold(`\n✅ Successfully created Pull Request!`));
+
+        } catch (error: any) {
+            console.log(chalk.red(`\n❌ Failed to create PR: ${error.message}`));
+        }
+    }
 }

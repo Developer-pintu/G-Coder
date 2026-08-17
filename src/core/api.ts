@@ -30,10 +30,15 @@ export const getProviderConfig = (providerInput: string, selectedModel?: string)
                 url: (key) => `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
                 headers: () => ({ 'Content-Type': 'application/json' }),
                 payload: (messages) => ({
-                    contents: messages.map(m => ({
-                        role: m.role === 'assistant' ? 'model' : 'user',
-                        parts: [{ text: m.content }]
-                    }))
+                    contents: messages.map(m => {
+                        const parts = Array.isArray(m.content) 
+                            ? m.content.map((c: any) => c.type === 'text' ? { text: c.text } : { inline_data: { mime_type: c.image_url.url.split(';')[0].split(':')[1], data: c.image_url.url.split(',')[1] } })
+                            : [{ text: m.content }];
+                        return {
+                            role: m.role === 'assistant' ? 'model' : 'user',
+                            parts
+                        };
+                    })
                 }),
                 parse: (data) => data?.candidates?.[0]?.content?.parts?.[0]?.text
             };
@@ -54,14 +59,15 @@ export const getProviderConfig = (providerInput: string, selectedModel?: string)
                         if (idx === messages.length - 1) {
                             return {
                                 role: m.role,
-                                content: [
-                                    {
-                                        type: 'text',
-                                        text: m.content,
-                                        cache_control: { type: 'ephemeral' }
-                                    }
-                                ]
-                            };
+                                        content: Array.isArray(m.content) 
+                                            ? [...m.content, { type: 'text', text: ' (Cache point)', cache_control: { type: 'ephemeral' } }] 
+                                            : [
+                                                {
+                                                    type: 'text',
+                                                    text: m.content,
+                                                    cache_control: { type: 'ephemeral' }
+                                                }
+                                            ]                  };
                         }
                         return m;
                     })

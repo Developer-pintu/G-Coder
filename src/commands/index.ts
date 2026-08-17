@@ -19,7 +19,10 @@ import { registerrunCommand } from './run';
 import { registerupdate_docsCommand } from './update-docs';
 import { registerconfigCommand } from './config';
 import { registerchatCommand } from './chat';
-
+import { registerSwarmCommand } from './swarm';
+import { registerVisionCommand } from './vision';
+import { registerScoutCommand } from './scout';
+import { registerPrCommand } from './pr';
 export const registerAllCommands = (program: Command, engine: SystemAgent, CLI_VERSION: string) => {
     registerclearCommand(program, engine, CLI_VERSION);
     registerupdateCommand(program, engine, CLI_VERSION);
@@ -39,4 +42,8 @@ export const registerAllCommands = (program: Command, engine: SystemAgent, CLI_V
     registerupdate_docsCommand(program, engine, CLI_VERSION);
     registerconfigCommand(program, engine, CLI_VERSION);
     registerchatCommand(program, engine, CLI_VERSION);
+    registerSwarmCommand(program);
+    registerVisionCommand(program, engine);
+    registerScoutCommand(program);
+    registerPrCommand(program);
 };
