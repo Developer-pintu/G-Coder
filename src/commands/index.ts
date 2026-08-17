@@ -1,0 +1,42 @@
+import { Command } from 'commander';
+import { SystemAgent } from '../core/agentEngine';
+
+import { registerclearCommand } from './clear';
+import { registerupdateCommand } from './update';
+import { registerenvCommand } from './env';
+import { registerdoctorCommand } from './doctor';
+import { registerdeps_auditCommand } from './deps-audit';
+import { registerverifyCommand } from './verify';
+import { registercreateCommand } from './create';
+import { registerbatchCommand } from './batch';
+import { registergitCommand } from './git';
+import { registerpreviewCommand } from './preview';
+import { registeraskCommand } from './ask';
+import { registereditCommand } from './edit';
+import { registerfilesCommand } from './files';
+import { registerauditCommand } from './audit';
+import { registerrunCommand } from './run';
+import { registerupdate_docsCommand } from './update-docs';
+import { registerconfigCommand } from './config';
+import { registerchatCommand } from './chat';
+
+export const registerAllCommands = (program: Command, engine: SystemAgent, CLI_VERSION: string) => {
+    registerclearCommand(program, engine, CLI_VERSION);
+    registerupdateCommand(program, engine, CLI_VERSION);
+    registerenvCommand(program, engine, CLI_VERSION);
+    registerdoctorCommand(program, engine, CLI_VERSION);
+    registerdeps_auditCommand(program, engine, CLI_VERSION);
+    registerverifyCommand(program, engine, CLI_VERSION);
+    registercreateCommand(program, engine, CLI_VERSION);
+    registerbatchCommand(program, engine, CLI_VERSION);
+    registergitCommand(program, engine, CLI_VERSION);
+    registerpreviewCommand(program, engine, CLI_VERSION);
+    registeraskCommand(program, engine, CLI_VERSION);
+    registereditCommand(program, engine, CLI_VERSION);
+    registerfilesCommand(program, engine, CLI_VERSION);
+    registerauditCommand(program, engine, CLI_VERSION);
+    registerrunCommand(program, engine, CLI_VERSION);
+    registerupdate_docsCommand(program, engine, CLI_VERSION);
+    registerconfigCommand(program, engine, CLI_VERSION);
+    registerchatCommand(program, engine, CLI_VERSION);
+};

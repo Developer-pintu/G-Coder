@@ -1,4 +1,4 @@
-import cp from 'child_process';
+import spawn from 'cross-spawn';
 import path from 'path';
 
 export interface StructuredCommand {
@@ -27,7 +27,7 @@ export class CommandRunner {
         const timeoutMs = Math.min(Math.max(command.timeoutMs ?? 120_000, 1000), 30 * 60_000);
         const started = Date.now();
         return new Promise((resolve, reject) => {
-            const child = cp.spawn(command.executable, command.args ?? [], {
+            const child = spawn(command.executable, command.args ?? [], {
                 cwd,
                 shell: false,
                 windowsHide: true,
@@ -38,8 +38,8 @@ export class CommandRunner {
             let stderr = '';
             let timedOut = false;
             const timer = setTimeout(() => { timedOut = true; child.kill('SIGTERM'); }, timeoutMs);
-            child.stdout.on('data', chunk => { stdout = (stdout + chunk.toString()).slice(-500_000); });
-            child.stderr.on('data', chunk => { stderr = (stderr + chunk.toString()).slice(-500_000); });
+            child.stdout!.on('data', chunk => { stdout = (stdout + chunk.toString()).slice(-500_000); });
+            child.stderr!.on('data', chunk => { stderr = (stderr + chunk.toString()).slice(-500_000); });
             child.once('error', error => { clearTimeout(timer); reject(error); });
             child.once('close', code => {
                 clearTimeout(timer);

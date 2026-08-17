@@ -1,4 +1,4 @@
-import cp from 'child_process';
+import spawn from 'cross-spawn';
 import path from 'path';
 import chalk from 'chalk';
 import fse from 'fs-extra';
@@ -324,16 +324,16 @@ export class EnvironmentManager {
     }
 
     private defaultCommandChecker = (command: string, args: string[]): boolean => {
-        const result = cp.spawnSync(command, args, { stdio: 'ignore', shell: false, windowsHide: true });
+        const result = spawn.sync(command, args, { stdio: 'ignore', shell: false, windowsHide: true });
         return !result.error && result.status === 0;
     };
 
     private defaultCommandRunner = (spec: CommandSpec): Promise<CommandResult> => new Promise((resolve, reject) => {
-        const child = cp.spawn(spec.command, spec.args, { cwd: spec.cwd, shell: false, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+        const child = spawn(spec.command, spec.args, { cwd: spec.cwd, shell: false, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
         let stdout = '';
         let stderr = '';
-        child.stdout.on('data', chunk => { stdout = (stdout + chunk.toString()).slice(-100_000); });
-        child.stderr.on('data', chunk => { stderr = (stderr + chunk.toString()).slice(-100_000); });
+        child.stdout!.on('data', chunk => { stdout = (stdout + chunk.toString()).slice(-100_000); });
+        child.stderr!.on('data', chunk => { stderr = (stderr + chunk.toString()).slice(-100_000); });
         child.once('error', reject);
         child.once('close', code => resolve({ code: code ?? 1, stdout, stderr }));
     });
