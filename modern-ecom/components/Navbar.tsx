@@ -1,14 +1,14 @@
-import type { FC } from 'react';
+import React from 'react';
 
-const Navbar: FC = () => {
+const Navbar = () => {
   return (
-    <nav className="bg-gray-900 text-white p-4">
-      <div className="container mx-auto flex justify-between items-center">
-        <h1 className="text-2xl font-bold">E-Commerce Site</h1>
+    <nav className="fixed top-0 left-0 w-full bg-gray-900 bg-opacity-50 backdrop-blur-sm z-10">
+      <div className="container mx-auto p-4 flex justify-between items-center">
+        <h1 className="text-3xl font-bold text-white">Ecommerce Website</h1>
         <ul className="flex items-center space-x-4">
-          <li><a href="#" className="text-white hover:text-gray-300">Home</a></li>
-          <li><a href="#" className="text-white hover:text-gray-300">About</a></li>
-          <li><a href="#" className="text-white hover:text-gray-300">Contact</a></li>
+          <li className="hover:scale-110 transition-all duration-200"><a href="#" className="text-white">Home</a></li>
+          <li className="hover:scale-110 transition-all duration-200"><a href="#" className="text-white">Products</a></li>
+          <li className="hover:scale-110 transition-all duration-200"><a href="#" className="text-white">About</a></li>
         </ul>
       </div>
     </nav>

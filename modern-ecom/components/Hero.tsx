@@ -1,11 +1,11 @@
-import type { FC } from 'react';
+import React from 'react';
 
-const Hero: FC = () => {
+const Hero = () => {
   return (
-    <section className="bg-gray-900 text-white p-4 mt-4">
-      <div className="container mx-auto flex flex-col items-center justify-center h-screen">
-        <h1 className="text-5xl font-bold mb-4">Welcome to our E-Commerce Site</h1>
-        <p className="text-2xl mb-8">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed sit amet nulla auctor, vestibulum magna sed, convallis ex.</p>
+    <section className="h-screen bg-gray-900">
+      <div className="container mx-auto p-4 pt-6 md:p-6 lg:p-12 xl:p-24">
+        <h1 className="text-5xl font-bold text-white mb-4">Welcome to our Ecommerce Website</h1>
+        <p className="text-xl text-gray-300 mb-8">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed sit amet nulla auctor, vestibulum magna sed, convallis ex.</p>
         <button className="bg-orange-500 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded">Shop Now</button>
       </div>
     </section>

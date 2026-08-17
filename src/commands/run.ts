@@ -123,15 +123,15 @@ export const registerrunCommand = (program: Command, engine: SystemAgent, CLI_VE
                           }, { dryRun: options.dryRun, nonInteractive: options.nonInteractive, permission, sandbox: options.sandbox });
                           if (result.success && result.output) {
                               executionHistory += result.output;
+                              executionSuccess = true;
                           }
                           if (!result.success) {
+                              executionHistory += result.output;
                               executionSuccess = false;
-                              break;
                           }
                       } catch (e: any) {
                           console.log(chalk.red(`Execution Error: ${e.message}`));
                           executionSuccess = false;
-                          break;
                       }
     
                       if (hasDone) {
