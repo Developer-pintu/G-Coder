@@ -146,6 +146,7 @@ export const buildAiPrompt = (mode: string, input: string): string => {
             `}\n` +
             `\`\`\`\n` +
             `CRITICAL RULE: NEVER use the 'write' action on an EXISTING file, as it will overwrite the entire file and destroy the code! You MUST use 'patch' to modify existing files. Only use 'write' for creating completely NEW files.\n` +
+            `CRITICAL JSON RULE: NEVER use literal unescaped newlines inside JSON string values! You MUST escape all newlines as \\n. NEVER invent action types like 'mkdir'. Use 'run' for system commands, or 'write' (which auto-creates directories).\n` +
             `CRITICAL COMMAND RULE: Shell command strings are forbidden. Every run action MUST use a plain executable plus an array of individual args. Never use sh, bash, cmd, powershell, command chaining, pipes, redirection, or interpolation.\n` +
             `CRITICAL RULE: You MUST output exactly ONE JSON block per response at the very end of your thought process. Do NOT output hypothetical JSON blocks while thinking, as the system will parse all of them and may execute unintended actions or exit early.\n` +
             `CRITICAL MULTI-TURN LOOP RULE: The system will execute your 'read' and 'run' actions and feed the exact outputs back to you in the next iteration. You can loop as many times as needed to read, think, and test. ONCE the requested task is 100% complete, you MUST output a 'done' action to exit the loop.\n` +
