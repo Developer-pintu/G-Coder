@@ -5,6 +5,8 @@ import { UniversalKeyRotator } from './rotator';
 import { SystemAgent } from './agentEngine';
 import { StateManager } from './stateManager';
 import { ModelRegistry } from './modelRegistry';
+import { SessionAuthEngine } from './sessionAuthEngine';
+import { OfflineModeEngine } from './offlineMode';
 
 const engine = new SystemAgent();
 
@@ -177,8 +179,29 @@ export const executeAiRequest = async (promptOrMessages: string | any[], provide
     let success = false;
     let responseText = "";
     const spinner = ora('Agent is thinking...').start();
-
     let messages = typeof promptOrMessages === 'string' ? [{ role: 'user', content: promptOrMessages }] : [...promptOrMessages];
+
+    // --- OFFLINE MODE OVERRIDE ---
+    const offlineState = OfflineModeEngine.isOfflineActive();
+    if (offlineState.active) {
+        spinner.text = `Executing on Local GPU via Ollama (${offlineState.model})...`;
+        try {
+            // Ollama requires a slightly different format (prompt string or messages for chat API).
+            // We'll use the /api/chat endpoint which is standard.
+            const response = await axios.post('http://localhost:11434/api/chat', {
+                model: offlineState.model,
+                messages: messages,
+                stream: false
+            }, { timeout: 300000 }); // Local models can be slow
+            
+            spinner.succeed(`Agent formulated a response via Local GPU!`);
+            return response.data?.message?.content || "";
+        } catch (error: any) {
+            spinner.fail(`Local Ollama execution failed.`);
+            throw new Error(`Ensure Ollama is running and model '${offlineState.model}' is downloaded.\nDetails: ${error.message}`);
+        }
+    }
+    // ------------------------------
 
     let keyRetryCount = 0;
     const MAX_KEY_RETRIES = 3;
@@ -237,6 +260,35 @@ export const executeAiRequest = async (promptOrMessages: string | any[], provide
                         continue;
                     }
                 }
+
+                // --- BROWSER SESSION FALLBACK CASCADE ---
+                console.log(chalk.yellow(`\n[Fallback] API limit reached. Attempting Browser Session Proxy for ${activeProvider.toUpperCase()}...`));
+                const sessionEngine = new SessionAuthEngine();
+                const proxyHeaders = sessionEngine.getProxyHeaders(activeProvider);
+                
+                if (proxyHeaders) {
+                    try {
+                        const url = config.url(activeKey);
+                        const payload = config.payload(messages, activeKey);
+                        // Inject proxy headers over the default config
+                        const mergedHeaders = { ...config.headers(activeKey), ...proxyHeaders };
+                        
+                        spinner.start(`Proxying request via secure local session...`);
+                        const response = await axios.post(url, payload, { headers: mergedHeaders, timeout: 120000 });
+                        responseText = config.parse(response.data);
+                        
+                        if (responseText) {
+                            spinner.succeed(`Agent formulated a response via Session Proxy!`);
+                            success = true;
+                            continue; // Break while loop
+                        }
+                    } catch (proxyError: any) {
+                        console.log(chalk.red(`\n[Fallback Failed] Browser proxy request rejected by provider.`));
+                    }
+                } else {
+                    console.log(chalk.gray(`No local browser session found for ${activeProvider.toUpperCase()}. (Run 'g-coder login --provider ${activeProvider}')`));
+                }
+                // ------------------------------------------
 
                 console.log(chalk.yellow(`\n[Failover] ${reason}. Switched to Next Key (Index: ${(rotator as any).currentKeyIndex + 1}) for Provider: ${activeProvider.toUpperCase()}  `));
                 const rotated = rotator.rotate();

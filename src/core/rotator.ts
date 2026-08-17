@@ -1,5 +1,6 @@
 import * as dotenv from 'dotenv';
 import chalk from 'chalk';
+import { IdeBridge } from './ideBridge';
 dotenv.config();
 
 export class UniversalKeyRotator {
@@ -26,7 +27,17 @@ export class UniversalKeyRotator {
         }
 
         if (this.activeProviders.length === 0) {
-            throw new Error('[Fatal Error] No API keys found for any provider (*_API_KEYS) in .env file.');
+            console.log(chalk.gray(`[Rotator] No .env keys found. Scanning IDEs (VS Code/Cursor) for active sessions...`));
+            const ideKeys = IdeBridge.getExtractedKeys();
+            for (const [providerName, key] of Object.entries(ideKeys)) {
+                this.providers.set(providerName, [key]);
+                this.activeProviders.push(providerName);
+                console.log(chalk.green(`[IDE Bridge] Extracted active token for ${providerName.toUpperCase()}`));
+            }
+            
+            if (this.activeProviders.length === 0) {
+                throw new Error('[Fatal Error] No API keys found in .env and no active IDE sessions detected.');
+            }
         }
 
         // Try to set the preferred provider, or fallback to the first discovered provider

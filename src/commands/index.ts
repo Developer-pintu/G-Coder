@@ -23,6 +23,19 @@ import { registerSwarmCommand } from './swarm';
 import { registerVisionCommand } from './vision';
 import { registerScoutCommand } from './scout';
 import { registerPrCommand } from './pr';
+import { registerListenCommand } from './listen';
+import { registerSearchCommand } from './search';
+import { registerDbCommand } from './db';
+import { registerDeployCommand } from './deploy';
+import { registerSyncCommand } from './sync';
+import { registerLoginCommand } from './login';
+import { registerLogoutCommand } from './logout';
+import { registerHealCommand } from './heal';
+import { registerDebugCommand } from './debug';
+import { registerOfflineCommand } from './offline';
+import { registerMatrixCommand } from './matrix';
+import { registerRedTeamCommand } from './redteam';
+
 export const registerAllCommands = (program: Command, engine: SystemAgent, CLI_VERSION: string) => {
     registerclearCommand(program, engine, CLI_VERSION);
     registerupdateCommand(program, engine, CLI_VERSION);
@@ -46,4 +59,16 @@ export const registerAllCommands = (program: Command, engine: SystemAgent, CLI_V
     registerVisionCommand(program, engine);
     registerScoutCommand(program);
     registerPrCommand(program);
+    registerListenCommand(program, engine);
+    registerSearchCommand(program);
+    registerDbCommand(program);
+    registerDeployCommand(program);
+    registerSyncCommand(program);
+    registerLoginCommand(program);
+    registerLogoutCommand(program);
+    registerHealCommand(program);
+    registerDebugCommand(program);
+    registerOfflineCommand(program);
+    registerMatrixCommand(program);
+    registerRedTeamCommand(program);
 };

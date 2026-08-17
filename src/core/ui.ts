@@ -37,6 +37,18 @@ export const displayHelp = () => {
     console.log(chalk.green('  g-coder vision <img_path> <prompt>') + chalk.white(' Image-to-Code generator (React/Tailwind from mockup).'));
     console.log(chalk.green('  g-coder scout <url>') + chalk.white(' Autonomously browse docs to extract up-to-date context.'));
     console.log(chalk.green('  g-coder pr <branch>') + chalk.white(' Push branch, auto-generate AI PR summary, and create PR via gh CLI.'));
+    console.log(chalk.green('  g-coder listen <audio_path>') + chalk.white(' Voice-to-Code: Generate code by feeding an audio prompt.'));
+    console.log(chalk.green('  g-coder search <query>') + chalk.white(' Local RAG: Fast semantic search across your entire project.'));
+    console.log(chalk.green('  g-coder db <schema>') + chalk.white(' Auto-DB Architect: Generate Prisma schema and data seeders.'));
+    console.log(chalk.green('  g-coder deploy <target>') + chalk.white(' 1-Click Deployer: Generate Docker or Vercel configurations.'));
+    console.log(chalk.green('  g-coder sync') + chalk.white('          IDE Live Sync: Broadcast G-Coder AI edits directly to your VS Code.'));
+    console.log(chalk.green('  g-coder login') + chalk.white('         Securely login to capture fallback browser sessions (ChatGPT/Claude).'));
+    console.log(chalk.green('  g-coder logout') + chalk.white('        Wipe all local browser session cookies and fallbacks securely.'));
+    console.log(chalk.green('  g-coder heal <log>') + chalk.white('    CI/CD Healer: Analyze a failed pipeline log and auto-fix the code.'));
+    console.log(chalk.green('  g-coder debug <file>') + chalk.white('  "Time-Travel" Debugger: Execute script, catch crashes, and auto-fix.'));
+    console.log(chalk.green('  g-coder offline') + chalk.white('       Air-Gapped Privacy Mode: Toggle local AI execution via Ollama.'));
+    console.log(chalk.green('  g-coder matrix <name>') + chalk.white(' Monorepo Maestro: Mass-refactor all files dependent on a component.'));
+    console.log(chalk.green('  g-coder redteam <dir>') + chalk.white(' Zero-Day Threat Hunter: Autonomous vulnerability scanning & patching.'));
     console.log(chalk.green('  g-coder audit') + chalk.white('      Run deterministic whole-workspace security diagnostics and readiness scoring.'));
     console.log(chalk.green('  g-coder files') + chalk.white('      Recursively list all files in the workspace (respects .gitignore).'));
     console.log(chalk.green('  g-coder update-docs') + chalk.white(' Autonomously analyze the project and update the README.md with capabilities.'));
