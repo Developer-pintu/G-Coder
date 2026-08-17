@@ -55,21 +55,21 @@ export const getProviderConfig = (providerInput: string, selectedModel?: string)
             return {
                 url: () => `https://api.openai.com/v1/chat/completions`,
                 headers: (key) => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` }),
-                payload: (messages) => ({ model, messages }),
+                payload: (messages) => ({ model, max_tokens: 2048, messages }),
                 parse: (data) => data?.choices?.[0]?.message?.content
             };
         case 'groq':
             return {
                 url: () => `https://api.groq.com/openai/v1/chat/completions`,
                 headers: (key) => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` }),
-                payload: (messages) => ({ model, messages }),
+                payload: (messages) => ({ model, max_tokens: 2048, messages }),
                 parse: (data) => data?.choices?.[0]?.message?.content
             };
         case 'openrouter':
             return {
                 url: () => `https://openrouter.ai/api/v1/chat/completions`,
                 headers: (key) => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}`, 'HTTP-Referer': 'https://g-coder.local', 'X-Title': 'g-coder' }),
-                payload: (messages) => ({ model, messages }),
+                payload: (messages) => ({ model, max_tokens: 2048, messages }),
                 parse: (data) => data?.choices?.[0]?.message?.content
             };
         default:

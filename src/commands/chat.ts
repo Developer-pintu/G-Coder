@@ -26,13 +26,16 @@ import { Doctor } from '../core/doctor';
 import { SupplyChainScanner } from '../core/supplyChainScanner';
 import { VerificationPipeline } from '../core/verificationPipeline';
 import { PermissionProfile } from '../core/policyEngine';
+import { loadProjectConfig } from '../core/projectConfigManager';
 
 export const registerchatCommand = (program: Command, engine: SystemAgent, CLI_VERSION: string) => {
+    const config = loadProjectConfig();
+
     // Command: Chat (Interactive Repl)
     program
       .command('chat')
       .description('Start an interactive, continuous chat session with conversational memory')
-      .option('-p, --provider <type>', 'Preferred provider', 'gemini')
+      .option('-p, --provider <type>', 'Preferred provider', config.provider ?? 'gemini')
       .action(async (options) => {
           displayBanner();
           console.log(chalk.magenta.bold(`=== G-CODER INTERACTIVE CHAT ===`));

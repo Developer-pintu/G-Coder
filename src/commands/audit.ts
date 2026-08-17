@@ -26,13 +26,16 @@ import { Doctor } from '../core/doctor';
 import { SupplyChainScanner } from '../core/supplyChainScanner';
 import { VerificationPipeline } from '../core/verificationPipeline';
 import { PermissionProfile } from '../core/policyEngine';
+import { loadProjectConfig } from '../core/projectConfigManager';
 
 export const registerauditCommand = (program: Command, engine: SystemAgent, CLI_VERSION: string) => {
+    const config = loadProjectConfig();
+
     // Command: Audit
     program
       .command('audit')
       .description('Run deterministic workspace diagnostics and guarded, build-verified fixes')
-      .option('-p, --provider <type>', 'Provider used only when generating fixes', 'gemini')
+      .option('-p, --provider <type>', 'Provider used only when generating fixes', config.provider ?? 'gemini')
       .option('-f, --fix', 'Generate minimal patches and roll them back if the build fails')
       .action(async (options) => {
           const auditor = new ProjectAuditor();

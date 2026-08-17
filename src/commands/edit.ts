@@ -26,14 +26,17 @@ import { Doctor } from '../core/doctor';
 import { SupplyChainScanner } from '../core/supplyChainScanner';
 import { VerificationPipeline } from '../core/verificationPipeline';
 import { PermissionProfile } from '../core/policyEngine';
+import { loadProjectConfig } from '../core/projectConfigManager';
 
 export const registereditCommand = (program: Command, engine: SystemAgent, CLI_VERSION: string) => {
+    const config = loadProjectConfig();
+
     // Command: Edit
     program
       .command('edit')
       .description('Autonomously read, edit, and update files in the workspace')
       .argument('<instruction>', 'Instruction on what to build or change')
-      .option('-p, --provider <type>', 'Preferred provider', 'gemini')
+      .option('-p, --provider <type>', 'Preferred provider', config.provider ?? 'gemini')
       .action(async (instruction, options) => {
           instruction = new PromptEnhancer().enhance(instruction).enhanced;
           const fullPrompt = buildAiPrompt('edit', instruction);

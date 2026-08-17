@@ -26,14 +26,17 @@ import { Doctor } from '../core/doctor';
 import { SupplyChainScanner } from '../core/supplyChainScanner';
 import { VerificationPipeline } from '../core/verificationPipeline';
 import { PermissionProfile } from '../core/policyEngine';
+import { loadProjectConfig } from '../core/projectConfigManager';
 
 export const registeraskCommand = (program: Command, engine: SystemAgent, CLI_VERSION: string) => {
+    const config = loadProjectConfig();
+
     // Command: Ask
     program
       .command('ask')
       .description('Ask a question to AI without editing files')
       .argument('<prompt>', 'The prompt')
-      .option('-p, --provider <type>', 'Preferred provider', 'gemini')
+      .option('-p, --provider <type>', 'Preferred provider', config.provider ?? 'gemini')
       .action(async (prompt, options) => {
           const fullPrompt = buildAiPrompt('ask', prompt);
           const res = await executeAiRequest(fullPrompt, options.provider);

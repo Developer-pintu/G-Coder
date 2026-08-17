@@ -26,14 +26,17 @@ import { Doctor } from '../core/doctor';
 import { SupplyChainScanner } from '../core/supplyChainScanner';
 import { VerificationPipeline } from '../core/verificationPipeline';
 import { PermissionProfile } from '../core/policyEngine';
+import { loadProjectConfig } from '../core/projectConfigManager';
 
 export const registercreateCommand = (program: Command, engine: SystemAgent, CLI_VERSION: string) => {
+    const config = loadProjectConfig();
+
     // Command: Create (Zero-Knowledge Project Generator)
     program
       .command('create')
       .description('Zero-knowledge project generator. Build an entire app from a prompt.')
       .argument('<prompt>', 'Natural language prompt describing the app')
-      .option('-p, --provider <type>', 'Preferred provider', 'gemini')
+      .option('-p, --provider <type>', 'Preferred provider', config.provider ?? 'gemini')
       .action(async (prompt, options) => {
           const creator = new ProjectCreator();
           await creator.createProject(prompt, options.provider);

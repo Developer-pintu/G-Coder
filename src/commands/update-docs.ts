@@ -26,13 +26,16 @@ import { Doctor } from '../core/doctor';
 import { SupplyChainScanner } from '../core/supplyChainScanner';
 import { VerificationPipeline } from '../core/verificationPipeline';
 import { PermissionProfile } from '../core/policyEngine';
+import { loadProjectConfig } from '../core/projectConfigManager';
 
 export const registerupdate_docsCommand = (program: Command, engine: SystemAgent, CLI_VERSION: string) => {
+    const config = loadProjectConfig();
+
     // Command: Update Docs
     program
       .command('update-docs')
       .description('Autonomously analyze the project and update the README.md with capabilities')
-      .option('-p, --provider <type>', 'Preferred provider', 'gemini')
+      .option('-p, --provider <type>', 'Preferred provider', config.provider ?? 'gemini')
       .action(async (options) => {
           console.log(chalk.cyan(`\nAnalyzing project to update README.md...\n`));
           const instruction = "Analyze this workspace and completely rewrite the README.md to document the project's purpose, structure, and capabilities as an enterprise-grade agent. Output the write file JSON action.";

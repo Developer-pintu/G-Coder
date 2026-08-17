@@ -26,16 +26,25 @@ import { Doctor } from '../core/doctor';
 import { SupplyChainScanner } from '../core/supplyChainScanner';
 import { VerificationPipeline } from '../core/verificationPipeline';
 import { PermissionProfile } from '../core/policyEngine';
+import { loadProjectConfig } from '../core/projectConfigManager';
 
 export const registerrunCommand = (program: Command, engine: SystemAgent, CLI_VERSION: string) => {
+    const config = loadProjectConfig();
+    
     // Command: Run (Cognitive Agent)
     program
       .command('run')
       .description('Cognitive Autonomous Agent: reads context, plans, and edits code')
       .argument('[prompt]', 'The instruction prompt')
       .option('-f, --file <path>', 'File to read instructions from')
-      .option('-p, --provider <type>', 'Preferred provider', 'gemini')
-      .option('--no-heal', 'Disable the self-healing build loop')
+      .option('-p, --provider <type>', 'Preferred provider', config.provider ?? 'gemini')
+      .option('--no-heal', 'Disable the self-healing build loop', config.noHeal ?? false)
+      .option('--dry-run', 'Validate the plan and actions without side effects', config.dryRun ?? false)
+      .option('--non-interactive', 'Disable prompts and reject high-risk actions', config.nonInteractive ?? false)
+      .option('--sandbox', 'Execute structured commands in a locked-down Docker sandbox', config.sandbox ?? false)
+      .option('--permission <profile>', 'Permission profile: read-only, workspace-write, or full', config.permission ?? 'workspace-write')
+      .option('--max-requests <count>', 'Maximum execution-loop AI requests', value => Number.parseInt(value, 10), config.maxRequests ?? 10)
+      .option('--max-cost <usd>', 'Maximum estimated task cost in USD', value => Number.parseFloat(value), config.maxCost)
       .action(async (prompt, options) => {
           let instruction = prompt || '';
           

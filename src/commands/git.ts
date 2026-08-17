@@ -26,8 +26,11 @@ import { Doctor } from '../core/doctor';
 import { SupplyChainScanner } from '../core/supplyChainScanner';
 import { VerificationPipeline } from '../core/verificationPipeline';
 import { PermissionProfile } from '../core/policyEngine';
+import { loadProjectConfig } from '../core/projectConfigManager';
 
 export const registergitCommand = (program: Command, engine: SystemAgent, CLI_VERSION: string) => {
+    const config = loadProjectConfig();
+
     // Git Command Group
     const gitCmd = program
       .command('git')
@@ -45,7 +48,7 @@ export const registergitCommand = (program: Command, engine: SystemAgent, CLI_VE
       .command('push')
       .description('Automatically generates AI commit message (if empty) and pushes to remote')
       .option('-m, --message <text>', 'Optional manual commit message')
-      .option('-p, --provider <type>', 'Preferred provider for AI message generation', 'gemini')
+      .option('-p, --provider <type>', 'Preferred provider for AI message generation', config.provider ?? 'gemini')
       .action(async (options) => {
           const manager = new GitManager();
           await manager.push(options.message, options.provider);
@@ -62,7 +65,7 @@ export const registergitCommand = (program: Command, engine: SystemAgent, CLI_VE
     gitCmd
       .command('publish')
       .description('Initializes a GitHub repository using gh CLI and pushes code')
-      .option('-p, --provider <type>', 'Preferred provider for AI generation', 'gemini')
+      .option('-p, --provider <type>', 'Preferred provider for AI generation', config.provider ?? 'gemini')
       .action(async (options) => {
           const manager = new GitManager();
           await manager.publish(options.provider);
