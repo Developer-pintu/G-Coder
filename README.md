@@ -30,6 +30,15 @@ G-coder is not just a chat tool; it's a complete software engineering lifecycle 
 - **🌐 AI Git Operations:** Run `g-coder git push` to let the AI analyze your code changes and automatically write a professional `Conventional Commit` message. Or use `g-coder git publish` to automatically bootstrap a new GitHub repository from your terminal.
 - **🕵️ Model Scout:** An intelligent background engine that constantly pings global registries to notify you the moment a new AI model drops.
 - **🔑 Secure Key Rotator:** Your keys are kept completely safe in a hidden global folder (`~/.g-coder/.env`), completely avoiding accidental git leaks.
+- **🙈 Masked Credential Input:** API keys entered through the configuration wizard are masked in an interactive cross-platform password prompt and stored with restrictive file permissions.
+- **🪄 Prompt Enhancement:** Coding requests, including common Hinglish phrases, are normalized into structured, repository-aware engineering instructions before execution.
+- **💾 Stateful Resume:** Long-running tasks persist completed actions and touched files in `.g-coder-state.json`, allowing provider failover to continue without repeating finished work.
+- **🧠 Dynamic Model Registry:** OpenAI, Groq, and OpenRouter catalogs are refreshed at runtime, ranked for heavyweight coding, cached securely, and backed by offline-safe defaults.
+- **⬆️ Verified Self-Updates:** `g-coder update` verifies npm package identity and semantic versions before performing a shell-free global update.
+- **🛡️ Deterministic Deep Audit:** The entire workspace is checked for exposed secrets, unmasked input, unsafe commands, network timeouts, rejection gaps, and incomplete provider routing; `--fix` rolls back edits unless the build passes.
+- **🧰 Autonomous Environment Manager:** Project manifests are detected across Node.js, Python, Android/Gradle, Rust, Go, Ruby, PHP, and iOS projects; missing runtimes and packages can be installed interactively before the original workflow resumes.
+- **🔐 Controlled Autonomy:** Workspace containment, permission profiles, structured shell-free commands, patch validation, dry runs, request budgets, and optional Docker sandboxing gate agent side effects.
+- **🩺 Operational Tooling:** Built-in doctor, supply-chain audit, and multi-language verification commands provide human-readable or JSON reports for local and CI use.
 
 ---
 
@@ -72,8 +81,88 @@ Run the built-in Secure Configuration Wizard anywhere in your terminal:
 g-coder config
 ```
 
+To securely set or replace keys for a single provider:
+
+```bash
+g-coder config --set openai
+```
+
+### Model selection and custom providers
+
+Model selection is automatic for providers that expose model catalogs. Pin a model when reproducibility is more important than automatic discovery:
+
+```bash
+OPENAI_MODEL=gpt-4.1 g-coder run "Refactor the API layer" -p openai
+GROQ_MODEL=llama-3.3-70b-versatile g-coder ask "Explain this stack trace" -p groq
+```
+
+Generic OpenAI-compatible providers use `<PROVIDER>_API_KEYS`, `<PROVIDER>_MODEL`, and `<PROVIDER>_BASE_URL`. HTTPS is required unless `G_CODER_ALLOW_INSECURE_HTTP=true` is explicitly set for local development.
+
+### Updating and auditing
+
+```bash
+g-coder update --check   # Check the trusted npm release without installing
+g-coder update           # Safely install the verified latest global release
+g-coder audit            # Offline deterministic whole-workspace diagnostics
+g-coder audit --fix      # Generate guarded patches and keep them only if build passes
+g-coder env              # Report missing runtimes and project packages
+g-coder env --setup      # Prompt, install, verify, and resume automatically
+g-coder doctor --json    # Diagnose runtime, Git, Docker, credentials, and state
+g-coder deps-audit       # Detect missing lockfiles and unpinned dependencies
+g-coder verify --json    # Run detected lint, type-check, tests, and builds
+```
+
+### Runtime and dependency automation
+
+`g-coder create`, `g-coder run`, and `g-coder batch` automatically audit the workspace before execution and again before build verification. Installations are never performed without an explicit `y` or `yes`; pressing Enter defaults to No. System installers are invoked without a shell using the host's supported package manager:
+
+- Linux: `apt-get`, `dnf`, or `pacman` (with non-interactive `sudo -n` when required)
+- macOS: Homebrew
+- Windows: WinGet, with Chocolatey as a fallback
+
+Project packages use their native manager (`npm install`, an isolated Python `.venv`, `cargo fetch`, `go mod download`, `bundle install`, or `composer install`). Custom required binaries can be declared without arbitrary shell commands:
+
+```json
+{
+  "tools": [
+    {
+      "name": "protoc",
+      "command": "protoc",
+      "versionArgs": ["--version"],
+      "packages": {
+        "linux": "protobuf-compiler",
+        "darwin": "protobuf",
+        "win32": "Google.Protobuf"
+      }
+    }
+  ]
+}
+```
+
+Save this manifest as `.g-coder-env.json` in the workspace root. Names, commands, and system-package identifiers receive strict validation and are passed as process arguments rather than interpolated shell strings.
+
+### Controlled autonomy and CI
+
+The autonomous run command supports explicit safety and resource boundaries:
+
+```bash
+g-coder run "Upgrade authentication" --dry-run
+g-coder run "Fix tests" --permission workspace-write --max-requests 6
+g-coder run "Audit only" --permission read-only --non-interactive
+g-coder run "Test untrusted changes" --sandbox --non-interactive
+```
+
+- `--dry-run` parses and policy-validates the proposed actions without executing them.
+- `--permission` accepts `read-only`, `workspace-write`, or explicit `full` access.
+- `--non-interactive` removes confirmation prompts and rejects high-risk actions rather than silently approving them.
+- `--sandbox` runs structured commands in a read-only, capability-dropped Docker container with networking disabled by default.
+- `--max-requests` and `--max-cost` establish task-level resource budgets.
+
+AI command actions must provide a plain executable and argument array; shell strings, pipes, redirection, and command chaining are rejected. File operations are confined to the active workspace unless the user explicitly selects the `full` profile. Patches must target exactly one existing code block, remain within size limits, and pass secret-introduction checks.
+
 - This wizard will prompt you interactively for your API keys.
 - The keys are securely written to a hidden global directory on your machine (`~/.g-coder/.env`).
+- Interactive credentials are masked and are never printed by g-coder.
 - G-coder automatically bootstraps these keys from your home directory no matter which project folder you are working in!
 
 ---

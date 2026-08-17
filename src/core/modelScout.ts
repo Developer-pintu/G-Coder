@@ -26,7 +26,9 @@ export class ModelScout {
                 try {
                     const cache = fse.readJsonSync(this.cacheFile);
                     cachedCount = cache.count || 0;
-                } catch { }
+                } catch {
+                    cachedCount = 0;
+                }
             }
 
             // If we have more models than before, we found new ones!

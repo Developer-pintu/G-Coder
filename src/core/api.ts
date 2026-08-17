@@ -3,6 +3,8 @@ import ora from 'ora';
 import chalk from 'chalk';
 import { UniversalKeyRotator } from './rotator';
 import { SystemAgent } from './agentEngine';
+import { StateManager } from './stateManager';
+import { ModelRegistry } from './modelRegistry';
 
 const engine = new SystemAgent();
 
@@ -13,18 +15,19 @@ export interface ProviderConfig {
     parse: (data: any) => string;
 }
 
-const MAX_KEYS = 3;
+const modelRegistry = new ModelRegistry();
 let lastApiCallTime = 0;
 const GLOBAL_THROTTLE_MS = 2500; // 2.5 seconds minimum between API calls
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-export const getProviderConfig = (provider: string): ProviderConfig => {
+export const getProviderConfig = (providerInput: string, selectedModel?: string): ProviderConfig => {
+    const provider = providerInput.trim().toLowerCase();
+    const model = selectedModel ?? modelRegistry.getFallback(provider);
     switch (provider) {
         case 'gemini':
-            const geminiModel = process.env.GEMINI_MODEL || 'gemini-flash-latest';
             return {
-                url: (key) => `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${key}`,
+                url: (key) => `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
                 headers: () => ({ 'Content-Type': 'application/json' }),
                 payload: (messages) => ({
                     contents: messages.map(m => ({
@@ -35,49 +38,56 @@ export const getProviderConfig = (provider: string): ProviderConfig => {
                 parse: (data) => data?.candidates?.[0]?.content?.parts?.[0]?.text
             };
         case 'anthropic':
-            const anthropicModel = process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20240620';
             return {
                 url: () => `https://api.anthropic.com/v1/messages`,
                 headers: (key) => ({ 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' }),
-                payload: (messages) => ({ model: anthropicModel, max_tokens: 4096, messages }),
+                payload: (messages) => ({ model, max_tokens: 8192, messages }),
                 parse: (data) => data?.content?.[0]?.text
             };
         case 'deepseek':
-            const deepseekModel = process.env.DEEPSEEK_MODEL || 'deepseek-coder';
             return {
                 url: () => `https://api.deepseek.com/chat/completions`,
                 headers: (key) => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` }),
-                payload: (messages) => ({ model: deepseekModel, messages }),
+                payload: (messages) => ({ model, messages }),
                 parse: (data) => data?.choices?.[0]?.message?.content
             };
         case 'openai':
-            const openaiModel = process.env.OPENAI_MODEL || 'gpt-4o';
             return {
                 url: () => `https://api.openai.com/v1/chat/completions`,
                 headers: (key) => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` }),
-                payload: (messages) => ({ model: openaiModel, messages }),
+                payload: (messages) => ({ model, messages }),
                 parse: (data) => data?.choices?.[0]?.message?.content
             };
         case 'groq':
-            const groqModel = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
             return {
                 url: () => `https://api.groq.com/openai/v1/chat/completions`,
                 headers: (key) => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` }),
-                payload: (messages) => ({ model: groqModel, messages }),
+                payload: (messages) => ({ model, messages }),
                 parse: (data) => data?.choices?.[0]?.message?.content
             };
         case 'openrouter':
             return {
                 url: () => `https://openrouter.ai/api/v1/chat/completions`,
                 headers: (key) => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}`, 'HTTP-Referer': 'https://g-coder.local', 'X-Title': 'g-coder' }),
-                payload: (messages) => ({ model: "mistralai/mistral-7b-instruct:free", messages }),
+                payload: (messages) => ({ model, messages }),
                 parse: (data) => data?.choices?.[0]?.message?.content
             };
         default:
+            const envPrefix = provider.toUpperCase().replace(/-/g, '_');
+            const baseUrl = process.env[`${envPrefix}_BASE_URL`] ?? `https://api.${provider}.com/v1`;
+            let parsedBaseUrl: URL;
+            try {
+                parsedBaseUrl = new URL(baseUrl);
+                if (parsedBaseUrl.protocol !== 'https:' && process.env.G_CODER_ALLOW_INSECURE_HTTP !== 'true') {
+                    throw new Error('Only HTTPS endpoints are allowed.');
+                }
+            } catch (error: any) {
+                throw new Error(`Invalid ${provider} base URL: ${error.message}`);
+            }
             return {
-                url: () => `https://api.${provider}.com/v1/chat/completions`,
+                url: () => `${parsedBaseUrl.toString().replace(/\/$/, '')}/chat/completions`,
                 headers: (key) => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` }),
-                payload: (messages) => ({ model: "default", messages }),
+                payload: (messages) => ({ model, messages }),
                 parse: (data) => data?.choices?.[0]?.message?.content
             };
     }
@@ -106,12 +116,13 @@ export const buildAiPrompt = (mode: string, input: string): string => {
             `    { "type": "read", "path": "C:/config.json" },\n` +
             `    { "type": "write", "path": "D:/projects/app/src/new_file.ts", "content": "console.log('Hello');" },\n` +
             `    { "type": "patch", "path": "src/utils.ts", "patchBlock": "<<SEARCH>>\\nold code\\n<<REPLACE>>\\nnew code\\n<<END>>" },\n` +
-            `    { "type": "run", "command": "npm run build" },\n` +
+            `    { "type": "run", "executable": "npm", "args": ["run", "build"], "cwd": ".", "timeoutMs": 120000 },\n` +
             `    { "type": "done" }\n` +
             `  ]\n` +
             `}\n` +
             `\`\`\`\n` +
             `CRITICAL RULE: NEVER use the 'write' action on an EXISTING file, as it will overwrite the entire file and destroy the code! You MUST use 'patch' to modify existing files. Only use 'write' for creating completely NEW files.\n` +
+            `CRITICAL COMMAND RULE: Shell command strings are forbidden. Every run action MUST use a plain executable plus an array of individual args. Never use sh, bash, cmd, powershell, command chaining, pipes, redirection, or interpolation.\n` +
             `CRITICAL RULE: You MUST output exactly ONE JSON block per response at the very end of your thought process. Do NOT output hypothetical JSON blocks while thinking, as the system will parse all of them and may execute unintended actions or exit early.\n` +
             `CRITICAL MULTI-TURN LOOP RULE: The system will execute your 'read' and 'run' actions and feed the exact outputs back to you in the next iteration. You can loop as many times as needed to read, think, and test. ONCE the requested task is 100% complete, you MUST output a 'done' action to exit the loop.\n` +
             `Provide absolute or relative paths.`;
@@ -129,7 +140,7 @@ export const executeAiRequest = async (promptOrMessages: string | any[], provide
     let responseText = "";
     const spinner = ora('Agent is thinking...').start();
 
-    const messages = typeof promptOrMessages === 'string' ? [{ role: 'user', content: promptOrMessages }] : promptOrMessages;
+    let messages = typeof promptOrMessages === 'string' ? [{ role: 'user', content: promptOrMessages }] : [...promptOrMessages];
 
     let keyRetryCount = 0;
     const MAX_KEY_RETRIES = 3;
@@ -137,9 +148,10 @@ export const executeAiRequest = async (promptOrMessages: string | any[], provide
     while (!success) {
         const activeProvider = rotator.getActiveProvider();
         const activeKey = rotator.getActiveKey();
-        const config = getProviderConfig(activeProvider);
+        const selectedModel = await modelRegistry.resolveModel(activeProvider, activeKey);
+        const config = getProviderConfig(activeProvider, selectedModel);
 
-        spinner.text = `Contacting ${activeProvider.toUpperCase()} API...`;
+        spinner.text = `Contacting ${activeProvider.toUpperCase()} (${selectedModel})...`;
 
         try {
             // Strict Request Throttling
@@ -154,7 +166,7 @@ export const executeAiRequest = async (promptOrMessages: string | any[], provide
             const headers = config.headers(activeKey);
             const payload = config.payload(messages, activeKey);
 
-            const response = await axios.post(url, payload, { headers });
+            const response = await axios.post(url, payload, { headers, timeout: 120000 });
             lastApiCallTime = Date.now();
 
             responseText = config.parse(response.data);
@@ -193,6 +205,13 @@ export const executeAiRequest = async (promptOrMessages: string | any[], provide
                 if (!rotated) {
                     throw new Error('\n[Fatal Error] Queue exhausted. All configured providers and API keys have failed.');
                 } else {
+                    try {
+                        const resumePrompt = new StateManager().recordHandoff(activeProvider, reason);
+                        messages = [...messages, { role: 'user', content: resumePrompt }];
+                        console.log(chalk.cyan('[State] Resume context loaded; completed work will not be repeated.'));
+                    } catch {
+                        // Calls outside a stateful task continue without resume context.
+                    }
                     keyRetryCount = 0; // Reset for the next key
                     spinner.start('Retrying with fallback...');
                 }

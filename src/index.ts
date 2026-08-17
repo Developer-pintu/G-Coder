@@ -5,8 +5,6 @@ import * as path from 'path';
 import * as os from 'os';
 import { Command } from 'commander';
 import dotenv from 'dotenv';
-import axios from 'axios';
-import ora from 'ora';
 import chalk from 'chalk';
 import inquirer from 'inquirer';
 import ignore from 'ignore';
@@ -23,6 +21,16 @@ import { PreviewEngine } from './core/previewEngine';
 import { SystemAgent } from './core/agentEngine';
 import { SelfHealer } from './core/selfHealer';
 import { ProjectAuditor } from './core/auditor';
+import { PromptEnhancer } from './core/promptEnhancer';
+import { StateManager } from './core/stateManager';
+import { Updater } from './core/updater';
+import { EnvironmentManager } from './core/envManager';
+import { BudgetManager } from './core/budgetManager';
+import { ContextCompactor, ChatMessage } from './core/contextCompactor';
+import { Doctor } from './core/doctor';
+import { SupplyChainScanner } from './core/supplyChainScanner';
+import { VerificationPipeline } from './core/verificationPipeline';
+import { PermissionProfile } from './core/policyEngine';
 
 // 1. Load local .env (takes precedence)
 dotenv.config();
@@ -34,11 +42,21 @@ ModelScout.runScoutInBackground();
 
 const program = new Command();
 const engine = new SystemAgent();
+const CLI_VERSION = (() => {
+    try {
+        const metadata = JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', 'package.json'), 'utf8'));
+        if (typeof metadata.version === 'string' && /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(metadata.version)) return metadata.version;
+    } catch {
+        // The packaged CLI always includes package.json; this fallback keeps damaged installs diagnosable.
+    }
+    return '0.0.0';
+})();
 
 program
   .name('g-coder')
   .description('Universal Multi-Provider Autonomous AI Coding Agent CLI')
-  .version('3.0.0');
+  .version(CLI_VERSION)
+  .option('--update', 'Safely update the global g-coder installation');
 
 // Override default help
 program.helpInformation = () => '';
@@ -61,6 +79,60 @@ program
       clearTerminal();
   });
 
+// Command: Update CLI
+program
+  .command('update')
+  .description('Check for and safely install the latest global g-coder release')
+  .option('--check', 'Only check whether an update is available')
+  .option('--force', 'Reinstall the latest verified release')
+  .action(async (options) => {
+      await new Updater(CLI_VERSION).update({ checkOnly: options.check, force: options.force });
+  });
+
+// Command: Environment Audit/Setup
+program
+  .command('env')
+  .description('Audit runtimes and project dependencies for the current workspace')
+  .option('--setup', 'Prompt to install missing runtimes and project packages')
+  .action(async (options) => {
+      const manager = new EnvironmentManager();
+      if (options.setup) {
+          await manager.ensure(process.cwd());
+          return;
+      }
+      const report = manager.audit(process.cwd());
+      console.log(chalk.cyan.bold(`\n🔎 Environment audit: ${report.detectedFiles.length} project manifests detected`));
+      if (report.missingTools.length === 0 && report.pendingDependencies.length === 0) {
+          console.log(chalk.green('✅ All detected prerequisites are ready.'));
+          return;
+      }
+      report.missingTools.forEach(tool => console.log(chalk.yellow(`  Missing runtime: ${tool.displayName} (${tool.reason})`)));
+      report.pendingDependencies.forEach(dependency => console.log(chalk.yellow(`  Pending packages: ${dependency.displayName}`)));
+      console.log(chalk.gray('Run `g-coder env --setup` to install interactively.'));
+  });
+
+program.command('doctor').description('Diagnose the CLI, credentials, runtime, Git, sandbox, and session state').option('--json', 'Emit machine-readable JSON').action((options) => {
+    const checks = new Doctor().run(process.cwd());
+    if (options.json) { console.log(JSON.stringify({ checks }, null, 2)); return; }
+    console.log(chalk.cyan.bold('\n🩺 G-Coder Doctor'));
+    checks.forEach(check => console.log(`${check.status === 'pass' ? '✅' : check.status === 'warn' ? '⚠️' : '❌'} ${check.name}: ${check.detail}`));
+    if (checks.some(check => check.status === 'fail')) process.exitCode = 1;
+});
+
+program.command('deps-audit').description('Scan dependency manifests for supply-chain risks').option('--json', 'Emit machine-readable JSON').action((options) => {
+    const findings = new SupplyChainScanner().scan(process.cwd());
+    if (options.json) { console.log(JSON.stringify({ findings }, null, 2)); return; }
+    findings.forEach(finding => console.log(chalk[finding.severity === 'high' ? 'red' : 'yellow'](`[${finding.severity}] ${finding.file}: ${finding.message}`)));
+    if (findings.length === 0) console.log(chalk.green('✅ No deterministic dependency risks detected.'));
+});
+
+program.command('verify').description('Run the detected multi-language verification pipeline').option('--json', 'Emit machine-readable JSON').action(async (options) => {
+    const report = await new VerificationPipeline(process.cwd()).run();
+    if (options.json) console.log(JSON.stringify(report, null, 2));
+    else report.checks.forEach(check => console.log(`${check.status === 'passed' ? '✅' : '❌'} ${check.name} (${check.durationMs}ms)`));
+    if (!report.passed) process.exitCode = 1;
+});
+
 // Command: Create (Zero-Knowledge Project Generator)
 program
   .command('create')
@@ -80,6 +152,12 @@ program
   .requiredOption('--files <paths...>', 'List of files to read and edit simultaneously')
   .option('-p, --provider <type>', 'Preferred provider', 'gemini')
   .option('--no-heal', 'Disable the self-healing build loop')
+  .option('--dry-run', 'Validate the plan and actions without side effects')
+  .option('--non-interactive', 'Disable prompts and reject high-risk actions')
+  .option('--sandbox', 'Execute structured commands in a locked-down Docker sandbox')
+  .option('--permission <profile>', 'Permission profile: read-only, workspace-write, or full', 'workspace-write')
+  .option('--max-requests <count>', 'Maximum execution-loop AI requests', value => Number.parseInt(value, 10), 10)
+  .option('--max-cost <usd>', 'Maximum estimated task cost in USD', value => Number.parseFloat(value))
   .action(async (prompt, options) => {
       const editor = new BatchEditor();
       await editor.editBatch(prompt, options.files, options.provider, options.noHeal);
@@ -157,6 +235,7 @@ program
   .argument('<instruction>', 'Instruction on what to build or change')
   .option('-p, --provider <type>', 'Preferred provider', 'gemini')
   .action(async (instruction, options) => {
+      instruction = new PromptEnhancer().enhance(instruction).enhanced;
       const fullPrompt = buildAiPrompt('edit', instruction);
       const res = await executeAiRequest(fullPrompt, options.provider);
       
@@ -217,132 +296,10 @@ program
 // Command: Audit
 program
   .command('audit')
-  .description('Advanced code auditing: analyzes the workspace for issues, leaks, and readiness, and provides AI suggestions')
-  .option('-p, --provider <type>', 'Preferred provider for AI analysis', 'gemini')
-  .option('-f, --fix', 'Automatically fix the issues found in the audit')
+  .description('Run deterministic workspace diagnostics and guarded, build-verified fixes')
+  .option('-p, --provider <type>', 'Provider used only when generating fixes', 'gemini')
+  .option('-f, --fix', 'Generate minimal patches and roll them back if the build fails')
   .action(async (options) => {
-      console.log(chalk.magenta.bold(`\n=== G-CODER ADVANCED AUDIT ===\n`));
-      const cwd = process.cwd();
-      const ig = ignore();
-      const gitignorePath = path.join(cwd, '.gitignore');
-      if (fs.existsSync(gitignorePath)) ig.add(fs.readFileSync(gitignorePath, 'utf8'));
-      ig.add(['node_modules', '.git', 'dist', 'build', '.next', 'coverage']);
-
-      let totalFiles = 0;
-      let consoleLogs = 0;
-      let missingTryCatch = 0;
-      let hardcodedSecrets = 0;
-      let todos = 0;
-      let hasPackageJson = false;
-      let hasTsConfig = false;
-      let hasReadme = false;
-      let hasEnv = false;
-
-      const warnings: string[] = [];
-      const vulnerabilities: string[] = [];
-
-      const scanFile = (filePath: string, relativePath: string) => {
-          try {
-              const content = fs.readFileSync(filePath, 'utf-8');
-              
-              // Basic heuristic analysis
-              if (content.includes('console.log(')) consoleLogs++;
-              if (content.includes('TODO:') || content.includes('FIXME:')) todos++;
-              
-              const secretRegex = /(password|api_key|secret|token)\s*[:=]\s*['"][^'"]+['"]/i;
-              if (secretRegex.test(content) && !relativePath.includes('.env')) {
-                  hardcodedSecrets++;
-                  vulnerabilities.push(`Hardcoded secret/token pattern detected in ${relativePath}`);
-              }
-              
-              if ((filePath.endsWith('.ts') || filePath.endsWith('.js')) && content.includes('await ') && !content.includes('try {') && !content.includes('.catch(')) {
-                  missingTryCatch++;
-                  warnings.push(`Missing error handling (try/catch or .catch) for async operations in ${relativePath}`);
-              }
-
-              // Check core files
-              if (relativePath === 'package.json') hasPackageJson = true;
-              if (relativePath === 'tsconfig.json') hasTsConfig = true;
-              if (relativePath.toLowerCase() === 'readme.md') hasReadme = true;
-              if (relativePath === '.env' || relativePath === '.env.example') hasEnv = true;
-
-          } catch (e: any) {
-             // skip binary or unreadable files
-          }
-      };
-
-      const scanDir = (currentPath: string) => {
-          try {
-              const entries = fs.readdirSync(currentPath, { withFileTypes: true });
-              for (const entry of entries) {
-                  const relPath = path.relative(cwd, path.join(currentPath, entry.name));
-                  if (!ig.ignores(relPath)) {
-                      if (entry.isDirectory()) {
-                          scanDir(path.join(currentPath, entry.name));
-                      } else {
-                          totalFiles++;
-                          scanFile(path.join(currentPath, entry.name), relPath);
-                      }
-                  }
-              }
-          } catch (error: any) {
-              console.error(chalk.red(`Failed to read directory ${currentPath}: ${error.message}`));
-          }
-      };
-
-      const spinner = ora('Scanning workspace for vulnerabilities and issues...').start();
-      scanDir(cwd);
-      spinner.stop();
-
-      // Calculate Readiness Score
-      let score = 100;
-      if (!hasPackageJson) score -= 20;
-      if (!hasTsConfig) score -= 5;
-      if (!hasReadme) score -= 5;
-      if (!hasEnv) score -= 5;
-      
-      score -= (consoleLogs * 1);
-      score -= (missingTryCatch * 2);
-      score -= (hardcodedSecrets * 20);
-      score -= (todos * 1);
-
-      if (score < 0) score = 0;
-      if (score > 100) score = 100;
-
-      // Output Results
-      console.log(chalk.cyan.bold(`📁 Total Files Scanned: `) + chalk.white(`${totalFiles}`));
-      
-      console.log(chalk.yellow.bold(`\n⚠️  Potential Gaps & Warnings:`));
-      if (warnings.length > 0) {
-          warnings.slice(0, 5).forEach(w => console.log(chalk.yellow(`  - ${w}`)));
-          if (warnings.length > 5) console.log(chalk.yellow(`  - ...and ${warnings.length - 5} more warnings.`));
-      } else {
-          console.log(chalk.gray(`  - None detected.`));
-      }
-      
-      if (consoleLogs > 0) console.log(chalk.yellow(`  - Found ${consoleLogs} console.log() statements.`));
-      if (todos > 0) console.log(chalk.yellow(`  - Found ${todos} TODOs/FIXMEs.`));
-
-      console.log(chalk.red.bold(`\n🔴 Errors / Vulnerabilities / Leaks Found:`));
-      if (vulnerabilities.length > 0) {
-          vulnerabilities.forEach(v => console.log(chalk.red(`  - ${v}`)));
-      } else {
-          console.log(chalk.green(`  - Clean! No obvious leaks found.`));
-      }
-
-      console.log(chalk.magenta.bold(`\n📊 Estimated Application Readiness: `) + (score >= 80 ? chalk.green(`${score}% Ready`) : chalk.red(`${score}% Ready`)));
-
-      console.log(chalk.cyan.bold(`\n💡 Recommendations:`));
-      if (!hasReadme) console.log(chalk.white(`  - Add a README.md file to document the project.`));
-      if (!hasEnv) console.log(chalk.white(`  - Ensure you have a .env.example file for environment variables.`));
-      if (consoleLogs > 0) console.log(chalk.white(`  - Consider replacing console.log() with a proper logging library (e.g., Winston/Pino).`));
-      if (missingTryCatch > 0) console.log(chalk.white(`  - Add proper try/catch blocks around asynchronous calls.`));
-      if (hardcodedSecrets > 0) console.log(chalk.white(`  - URGENT: Remove hardcoded secrets and use environment variables instead.`));
-      if (score === 100) console.log(chalk.white(`  - Great job! The project looks very clean.`));
-
-      console.log('\n');
-      
-      // 2. AI Advanced Static Audit
       const auditor = new ProjectAuditor();
       await auditor.runAudit(options.provider, { fix: options.fix });
   });
@@ -373,17 +330,29 @@ program
           process.exit(1);
       }
 
+      const originalInstruction = instruction;
+      instruction = new PromptEnhancer().enhance(instruction).enhanced;
+      const stateManager = new StateManager();
+      stateManager.start(originalInstruction, instruction);
+
       const planner = new Planner();
       const gitGuard = new GitGuard();
       const healer = new SelfHealer(engine);
+      const permission = String(options.permission).toLowerCase() as PermissionProfile;
+      if (!['read-only', 'workspace-write', 'full'].includes(permission)) throw new Error(`Invalid permission profile: ${options.permission}`);
+      const budget = new BudgetManager({ maxRequests: options.maxRequests, maxCostUsd: options.maxCost });
       let executionSuccess = true;
 
       try {
           // 1. Planner Phase
           const isPlanApproved = await planner.createAndConfirmPlan(instruction, options.provider);
           if (!isPlanApproved) {
+              stateManager.fail('Execution plan was rejected by the user.');
               process.exit(0);
           }
+
+          const environment = new EnvironmentManager();
+          await environment.ensure(process.cwd());
 
           // 2. Git Checkpoint Phase
           gitGuard.checkpoint();
@@ -403,7 +372,7 @@ program
                   ? `\n\n--- PREVIOUS EXECUTION OUTPUTS ---\n${executionHistory}\n--- END PREVIOUS OUTPUTS ---\n\n` 
                   : '';
               const fullPrompt = buildAiPrompt('run', instruction + '\n\n' + mentionedFilesContext + historyContext);
-              
+              budget.consume();
               const res = await executeAiRequest(fullPrompt, options.provider);
               console.log(chalk.gray(`\n${res}\n`));
               
@@ -413,7 +382,11 @@ program
                   const hasDone = actions.some(a => a.type === 'done');
                   
                   try {
-                      const result = await engine.executeActions(actions);
+                      const result = await engine.executeActions(actions, (action, index) => {
+                          const generatedFile = action.type === 'write' || action.type === 'patch' ? action.path : undefined;
+                          const target = action.path || action.command || '';
+                          stateManager.recordStep(`${loopCount}.${index + 1}`, `${action.type}${target ? ` ${target}` : ''}`, generatedFile);
+                      }, { dryRun: options.dryRun, nonInteractive: options.nonInteractive, permission, sandbox: options.sandbox });
                       if (result.success && result.output) {
                           executionHistory += result.output;
                       }
@@ -446,7 +419,7 @@ program
               // If the project has a package.json, we run build
               const hasPackageJson = fs.existsSync(path.join(process.cwd(), 'package.json'));
               if (hasPackageJson) {
-                 const buildPassed = await healer.verifyAndHeal(options.provider, 'npm run build');
+                 const buildPassed = await healer.verifyAndHeal(options.provider);
                  if (!buildPassed) {
                      executionSuccess = false;
                  }
@@ -460,9 +433,11 @@ program
 
       // 5. Cleanup or Rollback
       if (executionSuccess) {
+          stateManager.complete();
           gitGuard.cleanup();
           console.log(chalk.green.bold(`\n✅ Autonomous task completed successfully!`));
       } else {
+          stateManager.fail('Autonomous execution failed or was rejected.');
           console.log(chalk.red.bold(`\n❌ Task failed.`));
           gitGuard.rollback();
       }
@@ -493,8 +468,9 @@ program
 program
   .command('config')
   .description('Interactive wizard to securely configure API keys globally')
-  .action(async () => {
-      await runConfigWizard();
+  .option('--set <provider>', 'Securely set or replace API keys for one provider')
+  .action(async (options) => {
+      await runConfigWizard(options.set);
   });
 
 // Command: Chat (Interactive Repl)
@@ -507,7 +483,8 @@ program
       console.log(chalk.magenta.bold(`=== G-CODER INTERACTIVE CHAT ===`));
       console.log(chalk.gray(`Type 'exit' or 'quit' to end the session.\n`));
       
-      let chatHistory: any[] = [];
+      let chatHistory: ChatMessage[] = [];
+      const contextCompactor = new ContextCompactor();
       
       // Inject system context into the first message
       let systemContext = engine.scanWorkspace();
@@ -538,6 +515,7 @@ program
 
           chatHistory.push({ role: 'user', content: fullPrompt });
           
+          chatHistory = contextCompactor.compact(chatHistory);
           const res = await executeAiRequest(chatHistory, options.provider);
           
           console.log(chalk.green(`\nAgent:\n`) + chalk.white(res) + `\n`);
@@ -555,4 +533,15 @@ program
       await askQuestion();
   });
 
-program.parse(process.argv);
+const main = async (): Promise<void> => {
+    if (process.argv.slice(2).some(argument => argument.toLowerCase() === '--update')) {
+        await new Updater(CLI_VERSION).update();
+        return;
+    }
+    await program.parseAsync(process.argv);
+};
+
+main().catch((error: any) => {
+    console.error(chalk.red.bold(`\n❌ ${error.message}`));
+    process.exitCode = 1;
+});

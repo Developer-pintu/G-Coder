@@ -85,6 +85,11 @@ Thumbs.db
 .g-coder
 keys.txt
 config.json
+.g-coder-state.json
+.g-coder-state.json.*.tmp
+.g-coder-env-cache/
+.venv/
+venv/
 
 # IDEs and Editors
 .idea/

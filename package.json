@@ -2,6 +2,10 @@
   "name": "g-coder",
   "version": "3.0.0",
   "description": "Universal Multi-Provider Autonomous AI Coding Agent CLI",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Developer-pintu/G-Coder.git"
+  },
   "main": "dist/index.js",
   "preferGlobal": true,
   "bin": {
@@ -9,7 +13,8 @@
   },
   "scripts": {
     "build": "tsc",
-    "start": "node ./dist/index.js"
+    "start": "node ./dist/index.js",
+    "test": "npm run build && node --test dist/core/*.test.js"
   },
   "dependencies": {
     "axios": "^1.7.2",
