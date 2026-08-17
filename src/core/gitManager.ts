@@ -10,7 +10,7 @@ export class GitManager {
         try {
             cp.execSync('git fetch --prune', { stdio: 'ignore' });
             const branchesRaw = cp.execSync('git branch', { encoding: 'utf-8' });
-            
+
             const branches = branchesRaw.split('\n')
                 .map(b => b.trim().replace('* ', ''))
                 .filter(b => b.length > 0 && b !== 'main' && b !== 'master');
@@ -24,7 +24,7 @@ export class GitManager {
             branches.forEach(b => console.log(chalk.gray(`  - ${b}`)));
 
             const isConfirmed = await confirmAction(chalk.yellow.bold(`Are you sure you want to delete these ${branches.length} branches safely?`));
-            
+
             if (isConfirmed) {
                 let deletedCount = 0;
                 for (const branch of branches) {
@@ -51,7 +51,7 @@ export class GitManager {
             // Check if there are changes to commit
             cp.execSync('git add .', { stdio: 'ignore' });
             const status = cp.execSync('git status --porcelain', { encoding: 'utf-8', maxBuffer: 1024 * 1024 * 50 });
-            
+
             let commitMessage = messageOpt;
 
             if (status.trim() === '') {
@@ -60,7 +60,7 @@ export class GitManager {
                 if (!commitMessage) {
                     console.log(chalk.cyan(`Analyzing git diff to generate an AI commit message...`));
                     const diff = cp.execSync('git diff --cached', { encoding: 'utf-8', maxBuffer: 1024 * 1024 * 50 });
-                    
+
                     if (diff.trim().length > 0) {
                         try {
                             const prompt = `Generate a single, short, professional conventional commit message (e.g., "feat: added login page") for the following git diff. Output ONLY the message, no quotes or explanation:\n\n${diff.substring(0, 3000)}`;
@@ -121,7 +121,7 @@ export class GitManager {
 
     public async publish(providerOpt: string = 'gemini') {
         console.log(chalk.magenta.bold(`\n🌐 GitHub Auto-Publish Utility`));
-        
+
         // 1. Check if GitHub CLI is installed
         try {
             cp.execSync('gh --version', { stdio: 'ignore' });
@@ -161,7 +161,7 @@ export class GitManager {
             const prompt = `Based on this context, write a single, short, highly attractive 1-sentence GitHub repository description (max 120 chars). Output ONLY the description, no quotes.\n\nContext:\n${context}`;
             const fullPrompt = buildAiPrompt('ask', prompt);
             const res = await executeAiRequest(fullPrompt, providerOpt);
-            
+
             if (res && res.trim().length > 5) {
                 aiSuggestedDesc = res.trim().replace(/^["']|["']$/g, '');
                 console.log(chalk.green(`✔ AI Suggestion: `) + chalk.white(aiSuggestedDesc));
@@ -197,7 +197,7 @@ export class GitManager {
 
         const isPublic = answers.visibility === 'Public';
         const visibilityFlag = isPublic ? '--public' : '--private';
-        
+
         const safeDescription = String(answers.description).replace(/[\r\n\0]/g, ' ').trim().slice(0, 350);
         const safeRepoName = String(answers.repoName).trim();
         if (!/^[A-Za-z0-9._-]{1,100}$/.test(safeRepoName)) {
@@ -206,7 +206,7 @@ export class GitManager {
         }
 
         console.log(chalk.cyan(`\nCreating ${answers.visibility} repository '${answers.repoName}' on GitHub and pushing code...`));
-        
+
         try {
             // Check if there are initial commits, if not commit them
             const status = cp.execSync('git status --porcelain', { encoding: 'utf-8', maxBuffer: 1024 * 1024 * 50 });
