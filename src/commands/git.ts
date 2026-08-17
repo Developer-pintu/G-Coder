@@ -11,7 +11,7 @@ import { Planner } from '../core/planner';
 import { GitGuard } from '../core/gitGuard';
 import { ProjectCreator } from '../core/creator';
 import { BatchEditor } from '../core/batchEditor';
-import { GitManager } from '../core/gitManager';
+import { GitEngine } from '../core/gitEngine';
 import { PreviewEngine } from '../core/previewEngine';
 import { SystemAgent } from '../core/agentEngine';
 import { SelfHealer } from '../core/selfHealer';
@@ -40,7 +40,7 @@ export const registergitCommand = (program: Command, engine: SystemAgent, CLI_VE
       .command('cleanup')
       .description('Safely deletes all local and remote branches except main/master')
       .action(async () => {
-          const manager = new GitManager();
+          const manager = new GitEngine();
           await manager.cleanup();
       });
     
@@ -50,7 +50,7 @@ export const registergitCommand = (program: Command, engine: SystemAgent, CLI_VE
       .option('-m, --message <text>', 'Optional manual commit message')
       .option('-p, --provider <type>', 'Preferred provider for AI message generation', config.provider ?? 'gemini')
       .action(async (options) => {
-          const manager = new GitManager();
+          const manager = new GitEngine();
           await manager.push(options.message, options.provider);
       });
     
@@ -58,7 +58,7 @@ export const registergitCommand = (program: Command, engine: SystemAgent, CLI_VE
       .command('pull')
       .description('Pulls latest changes from remote')
       .action(async () => {
-          const manager = new GitManager();
+          const manager = new GitEngine();
           await manager.pull();
       });
     
@@ -67,7 +67,7 @@ export const registergitCommand = (program: Command, engine: SystemAgent, CLI_VE
       .description('Initializes a GitHub repository using gh CLI and pushes code')
       .option('-p, --provider <type>', 'Preferred provider for AI generation', config.provider ?? 'gemini')
       .action(async (options) => {
-          const manager = new GitManager();
+          const manager = new GitEngine();
           await manager.publish(options.provider);
       });
 };

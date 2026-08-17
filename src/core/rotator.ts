@@ -26,18 +26,24 @@ export class UniversalKeyRotator {
             }
         }
 
-        if (this.activeProviders.length === 0) {
-            console.log(chalk.gray(`[Rotator] No .env keys found. Scanning IDEs (VS Code/Cursor) for active sessions...`));
+        // Automatically scan IDEs for active sessions and merge them
+        try {
             const ideKeys = IdeBridge.getExtractedKeys();
             for (const [providerName, key] of Object.entries(ideKeys)) {
-                this.providers.set(providerName, [key]);
-                this.activeProviders.push(providerName);
+                if (this.providers.has(providerName)) {
+                    this.providers.get(providerName)!.push(key);
+                } else {
+                    this.providers.set(providerName, [key]);
+                    this.activeProviders.push(providerName);
+                }
                 console.log(chalk.green(`[IDE Bridge] Extracted active token for ${providerName.toUpperCase()}`));
             }
-            
-            if (this.activeProviders.length === 0) {
-                throw new Error('[Fatal Error] No API keys found in .env and no active IDE sessions detected.');
-            }
+        } catch (e) {
+            // Ignore bridge errors
+        }
+
+        if (this.activeProviders.length === 0) {
+            throw new Error('[Fatal Error] No API keys found in .env and no active IDE sessions detected.');
         }
 
         // Try to set the preferred provider, or fallback to the first discovered provider
