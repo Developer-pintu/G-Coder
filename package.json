@@ -13,7 +13,7 @@
     "gcode": "./dist/index.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "ts-node src/core/watermark.ts && tsc",
     "start": "node ./dist/index.js",
     "test": "npm run build && node --test dist/core/*.test.js"
   },

@@ -1,3 +1,8 @@
+/**
+ * Project: g-coder CLI Tool
+ * Author: Developer Pintu
+ * License: MIT - Free to use with proper attribution.
+ */
 import * as dotenv from 'dotenv';
 import chalk from 'chalk';
 import { IdeBridge } from './ideBridge';

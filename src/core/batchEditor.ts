@@ -1,3 +1,8 @@
+/**
+ * Project: g-coder CLI Tool
+ * Author: Developer Pintu
+ * License: MIT - Free to use with proper attribution.
+ */
 import chalk from 'chalk';
 import fse from 'fs-extra';
 import path from 'path';

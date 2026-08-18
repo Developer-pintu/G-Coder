@@ -1,3 +1,8 @@
+/**
+ * Project: g-coder CLI Tool
+ * Author: Developer Pintu
+ * License: MIT - Free to use with proper attribution.
+ */
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import fse from 'fs-extra';

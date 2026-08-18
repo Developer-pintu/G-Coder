@@ -1,3 +1,8 @@
+/**
+ * Project: g-coder CLI Tool
+ * Author: Developer Pintu
+ * License: MIT - Free to use with proper attribution.
+ */
 import cp from 'child_process';
 import chalk from 'chalk';
 import inquirer from 'inquirer';

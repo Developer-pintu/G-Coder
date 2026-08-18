@@ -1,3 +1,8 @@
+/**
+ * Project: g-coder CLI Tool
+ * Author: Developer Pintu
+ * License: MIT - Free to use with proper attribution.
+ */
 import puppeteer from 'puppeteer';
 import * as http from 'http';
 import * as fs from 'fs';

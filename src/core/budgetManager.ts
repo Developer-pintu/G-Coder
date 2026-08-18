@@ -1,3 +1,8 @@
+/**
+ * Project: g-coder CLI Tool
+ * Author: Developer Pintu
+ * License: MIT - Free to use with proper attribution.
+ */
 export interface BudgetLimits { maxRequests?: number; maxTokens?: number; maxCostUsd?: number; }
 export interface BudgetUsage { requests: number; tokens: number; costUsd: number; }
 

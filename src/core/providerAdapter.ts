@@ -1,3 +1,8 @@
+/**
+ * Project: g-coder CLI Tool
+ * Author: Developer Pintu
+ * License: MIT - Free to use with proper attribution.
+ */
 export interface CompletionMessage { role: 'user' | 'assistant' | 'system'; content: string; }
 export interface CompletionRequest { model: string; messages: CompletionMessage[]; maxTokens?: number; }
 export interface CompletionResult { text: string; model: string; inputTokens?: number; outputTokens?: number; }

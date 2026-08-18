@@ -1,3 +1,8 @@
+/**
+ * Project: g-coder CLI Tool
+ * Author: Developer Pintu
+ * License: MIT - Free to use with proper attribution.
+ */
 export interface ChatMessage { role: 'user' | 'assistant' | 'system'; content: string; }
 export class ContextCompactor {
     constructor(private readonly maxCharacters: number = 80_000) {}

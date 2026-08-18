@@ -1,3 +1,8 @@
+/**
+ * Project: g-coder CLI Tool
+ * Author: Developer Pintu
+ * License: MIT - Free to use with proper attribution.
+ */
 import { Command } from 'commander';
 import { SystemAgent } from '../core/agentEngine';
 
@@ -43,6 +48,9 @@ import { registerPredictCommand } from './predict';
 import { registerHologramCommand } from './hologram';
 import { registerChaosCommand } from './chaos';
 import { registerMemoryCommand } from './memory';
+import { registerInspectCommand } from './inspect';
+import { registerEvolveCommand } from './evolve';
+import { registerHybridCommand } from './hybrid';
 import { registerMorphCommand } from './morph';
 import { registerTrainCommand } from './train';
 import { registerHuntCommand } from './hunt';
@@ -95,4 +103,7 @@ export const registerAllCommands = (program: Command, engine: SystemAgent, CLI_V
     registerTrainCommand(program);
     registerHuntCommand(program);
     registerFortifyCommand(program);
+    registerInspectCommand(program);
+    registerEvolveCommand(program);
+    registerHybridCommand(program);
 };

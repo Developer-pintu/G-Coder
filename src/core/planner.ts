@@ -1,3 +1,8 @@
+/**
+ * Project: g-coder CLI Tool
+ * Author: Developer Pintu
+ * License: MIT - Free to use with proper attribution.
+ */
 import chalk from 'chalk';
 import { executeAiRequest, buildAiPrompt } from './api';
 import { confirmAction } from './utils';

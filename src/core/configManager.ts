@@ -1,3 +1,8 @@
+/**
+ * Project: g-coder CLI Tool
+ * Author: Developer Pintu
+ * License: MIT - Free to use with proper attribution.
+ */
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as os from 'os';

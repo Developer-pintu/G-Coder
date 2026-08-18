@@ -1,3 +1,8 @@
+/**
+ * Project: g-coder CLI Tool
+ * Author: Developer Pintu
+ * License: MIT - Free to use with proper attribution.
+ */
 export type ToolRisk = 'read' | 'write' | 'external-side-effect';
 export interface AgentTool<T = unknown> { name: string; description: string; risk: ToolRisk; execute(input: unknown): Promise<T>; }
 export class ToolRegistry {

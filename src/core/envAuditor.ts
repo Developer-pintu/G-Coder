@@ -1,3 +1,8 @@
+/**
+ * Project: g-coder CLI Tool
+ * Author: Developer Pintu
+ * License: MIT - Free to use with proper attribution.
+ */
 import { sync as spawnSync } from 'cross-spawn';
 import inquirer from 'inquirer';
 import chalk from 'chalk';

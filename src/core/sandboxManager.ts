@@ -1,3 +1,8 @@
+/**
+ * Project: g-coder CLI Tool
+ * Author: Developer Pintu
+ * License: MIT - Free to use with proper attribution.
+ */
 import path from 'path';
 import spawn from 'cross-spawn';
 import { CommandRunner, CommandExecutionResult, StructuredCommand } from './commandRunner';

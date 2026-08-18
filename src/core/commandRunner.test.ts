@@ -1,3 +1,8 @@
+/**
+ * Project: g-coder CLI Tool
+ * Author: Developer Pintu
+ * License: MIT - Free to use with proper attribution.
+ */
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import { CommandRunner, StructuredCommand } from './commandRunner';

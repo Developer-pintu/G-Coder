@@ -1,3 +1,8 @@
+/**
+ * Project: g-coder CLI Tool
+ * Author: Developer Pintu
+ * License: MIT - Free to use with proper attribution.
+ */
 import axios, { AxiosInstance } from 'axios';
 import fse from 'fs-extra';
 import os from 'os';

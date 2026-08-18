@@ -1,20 +1,17 @@
+/**
+ * Project: g-coder CLI Tool
+ * Author: Developer Pintu
+ * License: MIT - Free to use with proper attribution.
+ */
 import chalk from 'chalk';
+import { displayDynamicBanner } from './banner';
 
 /**
  * Displays the G-CODER ASCII Art Branding Banner.
  * This function should be called on startup or in the help menu.
  */
 export const displayBanner = () => {
-    const banner = `
-  ____        ____ ___  ____  _____ ____  
- / ___|      / ___/ _ \\|  _ \\| ____|  _ \\ 
-| |  _ _____| |  | | | | | | |  _| | |_) |
-| |_| |_____| |__| |_| | |_| | |___|  _ < 
- \\____|      \\____\\___/|____/|_____|_| \\_\\
-    `;
-    console.log(chalk.cyan.bold(banner));
-    console.log(chalk.gray('  Enterprise-Grade Autonomous AI Coding Agent (v3.0.0)'));
-    console.log(chalk.gray('  Powered by Multi-Provider AI Architecture\n'));
+    displayDynamicBanner();
 };
 
 /**

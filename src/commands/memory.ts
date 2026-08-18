@@ -1,3 +1,8 @@
+/**
+ * Project: g-coder CLI Tool
+ * Author: Developer Pintu
+ * License: MIT - Free to use with proper attribution.
+ */
 import { Command } from 'commander';
 import { RagMemory } from '../core/ragMemory';
 

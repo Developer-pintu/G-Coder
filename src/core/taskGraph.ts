@@ -1,3 +1,8 @@
+/**
+ * Project: g-coder CLI Tool
+ * Author: Developer Pintu
+ * License: MIT - Free to use with proper attribution.
+ */
 export type TaskStatus = 'pending' | 'running' | 'completed' | 'failed' | 'blocked';
 export interface TaskNode { id: string; title: string; dependencies: string[]; status: TaskStatus; error?: string; }
 
