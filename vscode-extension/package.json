@@ -17,6 +17,24 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "g-coder-sidebar",
+          "title": "G-Coder Ghost",
+          "icon": "$(hubot)"
+        }
+      ]
+    },
+    "views": {
+      "g-coder-sidebar": [
+        {
+          "type": "webview",
+          "id": "g-coder.chatView",
+          "name": "Chat"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "g-coder.connectGhost",

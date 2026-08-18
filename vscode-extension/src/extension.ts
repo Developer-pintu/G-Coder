@@ -1,8 +1,10 @@
 import * as vscode from 'vscode';
 import * as WebSocket from 'ws';
+import { ChatViewProvider } from './chatViewProvider';
 
 let ws: WebSocket | null = null;
 let statusBarItem: vscode.StatusBarItem;
+let chatProvider: ChatViewProvider | null = null;
 
 export function activate(context: vscode.ExtensionContext) {
     console.log('G-Coder Ghost is now active!');
@@ -11,6 +13,11 @@ export function activate(context: vscode.ExtensionContext) {
     statusBarItem.command = 'g-coder.connectGhost';
     context.subscriptions.push(statusBarItem);
     updateStatusBar('Disconnected');
+
+    chatProvider = new ChatViewProvider(context.extensionUri, () => ws);
+    context.subscriptions.push(
+        vscode.window.registerWebviewViewProvider(ChatViewProvider.viewType, chatProvider)
+    );
 
     let connectCmd = vscode.commands.registerCommand('g-coder.connectGhost', () => {
         connectToGhostServer();
@@ -35,7 +42,7 @@ function connectToGhostServer() {
 
     ws.on('open', () => {
         updateStatusBar('Connected');
-        vscode.window.showInformationMessage('G-Coder Ghost Server Connected! Ready for live typing.');
+        vscode.window.showInformationMessage('G-Coder Ghost Server Connected! Ready for live typing and chat.');
     });
 
     ws.on('message', (data) => {
@@ -48,6 +55,9 @@ function connectToGhostServer() {
                 ws?.send(JSON.stringify({ type: 'authRes', token: 'vscode_local_bridge' }));
             } else if (payload.type === 'type') {
                 typeIntoEditor(payload.content);
+            } else if (payload.type === 'chatResponse') {
+                // Route to chat view
+                if (chatProvider) chatProvider.appendMessage('agent', payload.content);
             }
         } catch (e) {
             // Handle raw strings as direct typing

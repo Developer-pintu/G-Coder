@@ -248,16 +248,22 @@ export const executeAiRequest = async (promptOrMessages: string | any[], provide
             const status = error.response?.status;
 
             if (status === 429 || status === 404 || status === 403 || status === 401 || status === 503 || !status) {
-                spinner.fail(`Failed with ${activeProvider.toUpperCase()} (Status: ${status || 'Network Error'}).`);
+                const failMsg = `Failed with ${activeProvider.toUpperCase()} (Status: ${status || 'Network Error'}).`;
+                // Only send telemetry, do not stop the spinner yet to keep the console clean
+
+                try {
+                    const ws = new (require('ws'))('ws://localhost:8080');
+                    ws.on('open', () => { ws.send(JSON.stringify({ type: 'telemetry', level: 'error', msg: failMsg })); ws.close(); });
+                    ws.on('error', () => {});
+                } catch(e) {}
                 let reason = "API Key Error";
                 if (status === 429) reason = "Rate Limit Exceeded";
                 else if (status === 503) reason = "Server Outage / Overloaded";
                 else if (status === 404) reason = "Model Not Found";
 
                 if (status === 429 || status === 503) {
-                    console.log(chalk.red(`\n[API Limits] ${reason} for ${activeProvider.toUpperCase()}. Triggering Zero-Downtime Engine...`));
+                    spinner.text = `[API Limits] ${reason}. Triggering Zero-Downtime Local Engine...`;
                     try {
-                        spinner.start(`Failing over to true Local-LLM (llama3) via Ollama...`);
                         const response = await axios.post('http://localhost:11434/api/chat', {
                             model: 'llama3', // Default fast local fallback model
                             messages: messages,
@@ -271,22 +277,21 @@ export const executeAiRequest = async (promptOrMessages: string | any[], provide
                             continue; // Break the retry loop
                         }
                     } catch (ollamaErr) {
-                        console.log(chalk.yellow(`\n[Zero-Downtime Engine Failed] Local Ollama is not running or model missing. Reverting to Exponential Backoff...`));
+                        // Silently fail Local LLM and proceed to exponential backoff
                     }
 
                     keyRetryCount++;
                     if (keyRetryCount <= MAX_KEY_RETRIES) {
                         // Exponential backoff: 5s, then 10s, then 15s...
                         const delayMs = keyRetryCount * 5000;
-                        console.log(chalk.yellow(`\n[API Limits] Waiting ${delayMs / 1000}s before retrying...`));
+                        spinner.text = `[API Limits] Waiting ${delayMs / 1000}s before retrying...`;
                         await sleep(delayMs);
-                        spinner.start(`Retrying (Attempt ${keyRetryCount}/${MAX_KEY_RETRIES})...`);
                         continue;
                     }
                 }
 
                 // --- BROWSER SESSION FALLBACK CASCADE ---
-                console.log(chalk.yellow(`\n[Fallback] API limit reached. Attempting Browser Session Proxy for ${activeProvider.toUpperCase()}...`));
+                spinner.text = `[Fallback] Attempting Browser Proxy for ${activeProvider.toUpperCase()}...`;
                 const sessionEngine = new SessionAuthEngine();
                 const proxyHeaders = sessionEngine.getProxyHeaders(activeProvider);
                 
@@ -294,10 +299,9 @@ export const executeAiRequest = async (promptOrMessages: string | any[], provide
                     try {
                         const url = config.url(activeKey);
                         const payload = config.payload(messages, activeKey);
-                        // Inject proxy headers over the default config
                         const mergedHeaders = { ...config.headers(activeKey), ...proxyHeaders };
                         
-                        spinner.start(`Proxying request via secure local session...`);
+                        spinner.text = `Proxying request via secure local session...`;
                         const response = await axios.post(url, payload, { headers: mergedHeaders, timeout: 120000 });
                         responseText = config.parse(response.data);
                         
@@ -307,27 +311,24 @@ export const executeAiRequest = async (promptOrMessages: string | any[], provide
                             continue; // Break while loop
                         }
                     } catch (proxyError: any) {
-                        console.log(chalk.red(`\n[Fallback Failed] Browser proxy request rejected by provider.`));
+                        // Proxy failed silently
                     }
-                } else {
-                    console.log(chalk.gray(`No local browser session found for ${activeProvider.toUpperCase()}. (Run 'g-coder login --provider ${activeProvider}')`));
                 }
                 // ------------------------------------------
 
-                console.log(chalk.yellow(`\n[Failover] ${reason}. Switched to Next Key (Index: ${(rotator as any).currentKeyIndex + 1}) for Provider: ${activeProvider.toUpperCase()}  `));
+                spinner.text = `[Failover] Cycling keys for Provider: ${activeProvider.toUpperCase()}...`;
                 const rotated = rotator.rotate();
                 if (!rotated) {
+                    spinner.fail(`Exhausted all providers and API keys.`);
                     throw new Error('\n[Fatal Error] Queue exhausted. All configured providers and API keys have failed.');
                 } else {
                     try {
                         const resumePrompt = new StateManager().recordHandoff(activeProvider, reason);
                         messages = [...messages, { role: 'user', content: resumePrompt }];
-                        console.log(chalk.cyan('[State] Resume context loaded; completed work will not be repeated.'));
                     } catch {
                         // Calls outside a stateful task continue without resume context.
                     }
                     keyRetryCount = 0; // Reset for the next key
-                    spinner.start('Retrying with fallback...');
                 }
             } else {
                 spinner.fail(`Unrecoverable error from ${activeProvider.toUpperCase()} API.`);

@@ -66,9 +66,14 @@ export class HybridExecutionEngine {
             if (results.length > 0) {
                 const context = WebSearchEngine.buildRagContext(query, results);
                 const answerSpinner = ora('Synthesizing search results with AI...').start();
-                const answer = await executeAiRequest(context, provider);
-                answerSpinner.succeed('Synthesis Complete:');
-                console.log(`\n${chalk.white(answer)}\n`);
+                try {
+                    const answer = await executeAiRequest(context, provider);
+                    answerSpinner.succeed('Synthesis Complete:');
+                    console.log(`\n${chalk.white(answer)}\n`);
+                } catch (error: any) {
+                    answerSpinner.fail(`Synthesis Failed.`);
+                    throw error; // Re-throw to be caught by the command handler
+                }
             }
             return;
         }
