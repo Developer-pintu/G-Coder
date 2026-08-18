@@ -1,7 +1,7 @@
 <div align="center">
-  <h1>🚀 g-coder</h1>
-  <p><b>The Autonomous AI CLI Engineering Suite</b></p>
-  <p>
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&height=220&section=header&text=G-Coder&fontSize=80&fontAlignY=35&desc=The%20Autonomous%20AI%20CLI%20Engineering%20Suite&descAlignY=65&descSize=25&animation=fadeIn" alt="G-Coder Professional Banner" width="100%">
+  <br>
+  <br>
     <img src="https://img.shields.io/badge/version-1.0.0-blue.svg" alt="Version">
     <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License">
     <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome">
