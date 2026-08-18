@@ -1,9 +1,10 @@
 {
   "name": "g-coder-ghost",
   "displayName": "G-Coder Ghost",
-  "description": "Live IDE IPC Bridge for the G-Coder Autonomous AI Suite",
+  "description": "Live IDE IPC Bridge for the G-Coder Autonomous AI Suite. Provides real-time context streaming and IDE integration for the g-coder CLI.",
   "version": "1.0.0",
   "publisher": "DeveloperPintu",
+  "icon": "icon.jpg",
   "engines": {
     "vscode": "^1.80.0"
   },
