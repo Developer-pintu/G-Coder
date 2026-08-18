@@ -2,23 +2,24 @@
 
 ## Supported Versions
 
-Currently, only the latest major release of **g-coder** is actively supported with security updates.
+Currently, the only version actively supported for security updates is the mainline major release:
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 3.x.x   | :white_check_mark: |
-| < 3.0.0 | :x:                |
+| 1.0.x   | :white_check_mark: |
+| < 1.0.0 | :x:                |
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability within **g-coder**, please **DO NOT** disclose it publicly. 
+Because `g-coder` is a high-privilege CLI tool capable of autonomous OS execution, we take security extremely seriously. 
 
-Instead, please report it to the core maintainers directly by opening a confidential Security Advisory on GitHub or contacting the original author (`Developer Pintu`).
+**Do NOT open a public GitHub issue for security vulnerabilities.**
 
-We take security seriously and will attempt to address and resolve any reported vulnerabilities as quickly as possible.
+If you discover a 0-day exploit, privilege escalation flaw, or remote code execution (RCE) vector within the architecture, please report it privately:
 
-## Authorized Distribution
+1. Email the core author immediately at the contact provided in their GitHub profile.
+2. Provide a detailed Proof of Concept (PoC) showing how the autonomous engines can be hijacked.
+3. We aim to acknowledge receipt of vulnerabilities within 48 hours and will issue a CVE patch release (`v1.x.x`) swiftly.
 
-To protect yourself from malicious code injections or supply chain attacks, always ensure you are downloading **g-coder** from the official NPM registry or the official GitHub repository (`Developer-pintu/G-Coder`). 
-
-Be cautious of unauthorized forks or rebranded versions that do not explicitly attribute the original author, as they may not be receiving official security patches and could contain altered code.
+## Sandbox Protections
+The `SelfEvolvingEngine` utilizes a local `.g-coder-capabilities` sandbox. Please do not commit this folder to public repositories if it contains sensitive dynamically generated scripts.

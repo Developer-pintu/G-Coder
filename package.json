@@ -1,7 +1,9 @@
 {
   "name": "g-coder",
-  "version": "3.0.0",
+  "version": "1.0.0",
   "description": "Universal Multi-Provider Autonomous AI Coding Agent CLI",
+  "author": "Developer Pintu",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Developer-pintu/G-Coder.git"

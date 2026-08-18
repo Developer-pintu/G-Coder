@@ -1,44 +1,24 @@
 # Contributing to g-coder
 
-Thank you for your interest in contributing to **g-coder**, the Universal Multi-Provider Autonomous AI Coding Agent CLI. We welcome contributions from the community to help make this tool even better!
-
-To ensure the long-term sustainability and clarity of ownership of the project, please review the following guidelines.
+First off, thank you for considering contributing to `g-coder`! As an autonomous AI orchestration platform, we welcome contributions that enhance our core AI heuristics, system APIs, and safety sandbox protocols.
 
 ## Code of Conduct
-By participating in this project, you agree to maintain a respectful, inclusive, and welcoming environment for everyone. 
 
-## Governance & Ownership
-This project is open-source and free to use under the **MIT License**. However, to protect the integrity of the project and its original creators:
-1. **Attribution**: Any forks, derived works, or redistributions must explicitly retain the original author's copyright notice (`Developer Pintu`), license text, and attribution.
-2. **Branding Takeovers**: Unauthorized rebranding, commercial relicensing without permission, or claiming original authorship of the core engine is strictly prohibited. The project name "g-coder" and its associated CLI branding must remain credited to the original author.
-3. **CLA (Contributor License Agreement)**: By submitting a Pull Request, you grant the project maintainers a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare derivative works of, publicly display, publicly perform, sublicense, and distribute your contributions.
+By participating in this project, you agree to abide by standard open-source community guidelines. Be respectful, inclusive, and collaborative.
 
-## How to Contribute
+## Development Workflow
 
-### 1. Fork & Clone
-Fork the repository on GitHub and clone it locally.
-```bash
-git clone https://github.com/YOUR_USERNAME/G-Coder.git
-cd G-Coder
-```
+1. **Fork & Branch**: Fork the repository and create a new feature branch (`git checkout -b feature/your-feature`).
+2. **Build the CLI**: Run `npm install` followed by `npm run build` to compile the TypeScript engines.
+3. **Run Tests**: Ensure all autonomous logic tests pass (`npm run test`).
+4. **Submit PR**: Open a Pull Request targeting the `main` branch.
 
-### 2. Install Dependencies
-Ensure you have Node.js installed, then run:
-```bash
-npm install
-```
+## Strict Licensing & Copyright Attribution Rules
 
-### 3. Make Changes
-Create a new branch for your feature or bugfix. Write your code, and ensure it passes all tests and linting.
-*Note: Our build system automatically injects copyright watermarks into all `.ts` files to ensure proper attribution.*
+`g-coder` uses the MIT License, meaning it is 100% free for everyone. However, to maintain the integrity of the project's ownership, **you must adhere to the following strict guidelines**:
 
-### 4. Test Your Changes
-Run the test suite before submitting:
-```bash
-npm test
-```
+1. **Do NOT remove the Copyright Headers**: Our build scripts automatically inject the `Developer Pintu` copyright watermark into all `.ts` files. Pull Requests that modify or attempt to bypass the `src/core/watermark.ts` engine will be instantly rejected.
+2. **Attribution Preservation**: If you create a fork or derived commercial product based on `g-coder`, the original `LICENSE` file and the CLI banner attribution MUST remain intact and visible to end-users.
+3. **New Files**: Any new `.ts` files you add will automatically receive the copyright header upon running `npm run build`. Please do not manually hardcode alternative headers.
 
-### 5. Submit a Pull Request
-Push your branch to your fork and open a Pull Request against the `main` branch of the original repository. Please provide a clear description of the changes and the problem they solve.
-
-We look forward to reviewing your contributions!
+We are excited to see what revolutionary capabilities you build into `g-coder`!

@@ -51,6 +51,8 @@ import { registerMemoryCommand } from './memory';
 import { registerInspectCommand } from './inspect';
 import { registerEvolveCommand } from './evolve';
 import { registerHybridCommand } from './hybrid';
+import { registerQuantumCommand } from './quantum';
+import { registerGhostCommand } from './ghost';
 import { registerMorphCommand } from './morph';
 import { registerTrainCommand } from './train';
 import { registerHuntCommand } from './hunt';
@@ -106,4 +108,6 @@ export const registerAllCommands = (program: Command, engine: SystemAgent, CLI_V
     registerInspectCommand(program);
     registerEvolveCommand(program);
     registerHybridCommand(program);
+    registerQuantumCommand(program);
+    registerGhostCommand(program);
 };
