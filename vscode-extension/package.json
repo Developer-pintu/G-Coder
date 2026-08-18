@@ -1,10 +1,14 @@
 {
   "name": "g-coder-ghost",
   "displayName": "G-Coder Ghost",
-  "description": "Live IDE IPC Bridge for the G-Coder Autonomous AI Suite. Provides real-time context streaming and IDE integration for the g-coder CLI.",
+  "description": "A developer tool for IDE integration.",
   "version": "1.0.0",
-  "publisher": "DeveloperPintu",
-  "icon": "icon.jpg",
+  "publisher": "developer-pintu",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/developer-pintu/g-coder.git"
+  },
+  "license": "MIT",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -31,7 +35,8 @@
         {
           "type": "webview",
           "id": "g-coder.chatView",
-          "name": "Chat"
+          "name": "Chat",
+          "icon": "$(hubot)"
         }
       ]
     },

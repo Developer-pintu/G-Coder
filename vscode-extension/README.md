@@ -1,8 +1,4 @@
-<div align="center">
-  <img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&height=220&section=header&text=G-Coder%20Ghost&fontSize=80&fontAlignY=35&desc=The%20Autonomous%20AI%20IDE%20Bridge&descAlignY=65&descSize=25&animation=fadeIn" alt="G-Coder Ghost Professional Banner" width="100%">
-</div>
-
-## 🌌 Welcome to G-Coder Ghost
+# 🌌 Welcome to G-Coder Ghost
 
 **G-Coder Ghost** is the official companion extension for the **[G-Coder CLI](https://www.npmjs.com/package/@developer-pintu/g-coder)**.
 
