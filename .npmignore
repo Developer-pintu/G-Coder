@@ -1,0 +1,10 @@
+src/
+.git/
+.vscode/
+tests/
+tsconfig.json
+jest.config.js
+.env
+.github/
+scratch/
+vscode-extension/

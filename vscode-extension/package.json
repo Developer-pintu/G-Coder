@@ -1,0 +1,41 @@
+{
+  "name": "g-coder-ghost",
+  "displayName": "G-Coder Ghost",
+  "description": "Live IDE IPC Bridge for the G-Coder Autonomous AI Suite",
+  "version": "1.0.0",
+  "publisher": "DeveloperPintu",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Machine Learning",
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "g-coder.connectGhost",
+        "title": "G-Coder: Connect Ghost Server"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.80.0",
+    "@types/node": "^18.x",
+    "@types/ws": "^8.5.5",
+    "typescript": "^5.1.3"
+  },
+  "dependencies": {
+    "ws": "^8.13.0"
+  }
+}
