@@ -8,6 +8,9 @@ import chalk from 'chalk';
 import inquirer from 'inquirer';
 import { executeAiRequest, buildAiPrompt } from './api';
 import { confirmAction } from './utils';
+import { ThreatHunter } from './threatHunter';
+import { BlastRadiusPredictor } from './blastRadius';
+import { GitChronicles } from './gitGraph';
 
 export class GitManager {
     public async cleanup() {
@@ -67,8 +70,26 @@ export class GitManager {
                     const diff = cp.execSync('git diff --cached', { encoding: 'utf-8', maxBuffer: 1024 * 1024 * 50 });
 
                     if (diff.trim().length > 0) {
+                        // 1. Pre-Commit Threat Hunter
+                        const isClean = ThreatHunter.scanDiff(diff);
+                        if (!isClean) {
+                            console.log(chalk.red.bold(`\n❌ Push Aborted. Remove the hardcoded secrets and try again.`));
+                            return;
+                        }
+
+                        // 2. Blast-Radius Predictor
+                        const isHighRisk = await BlastRadiusPredictor.analyze(diff, providerOpt);
+                        if (isHighRisk) {
+                            const proceed = await confirmAction(chalk.yellow.bold(`Are you sure you want to push this high-risk change?`));
+                            if (!proceed) {
+                                console.log(chalk.yellow(`Push aborted by user.`));
+                                return;
+                            }
+                        }
+
                         try {
-                            const prompt = `Generate a single, short, professional conventional commit message (e.g., "feat: added login page") for the following git diff. Output ONLY the message, no quotes or explanation:\n\n${diff.substring(0, 3000)}`;
+                            // 3. Git Neural Graph Context
+                            const prompt = GitChronicles.enhancePrompt(diff);
                             const fullPrompt = buildAiPrompt('ask', prompt);
                             let generated = await executeAiRequest(fullPrompt, providerOpt);
                             commitMessage = generated.trim().replace(/^["']|["']$/g, '');

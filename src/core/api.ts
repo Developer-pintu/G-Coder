@@ -255,11 +255,30 @@ export const executeAiRequest = async (promptOrMessages: string | any[], provide
                 else if (status === 404) reason = "Model Not Found";
 
                 if (status === 429 || status === 503) {
+                    console.log(chalk.red(`\n[API Limits] ${reason} for ${activeProvider.toUpperCase()}. Triggering Zero-Downtime Engine...`));
+                    try {
+                        spinner.start(`Failing over to true Local-LLM (llama3) via Ollama...`);
+                        const response = await axios.post('http://localhost:11434/api/chat', {
+                            model: 'llama3', // Default fast local fallback model
+                            messages: messages,
+                            stream: false
+                        }, { timeout: 300000 });
+                        
+                        spinner.succeed(`Zero-Downtime Engine Formulated Response Locally!`);
+                        responseText = response.data?.message?.content || "";
+                        if (responseText) {
+                            success = true;
+                            continue; // Break the retry loop
+                        }
+                    } catch (ollamaErr) {
+                        console.log(chalk.yellow(`\n[Zero-Downtime Engine Failed] Local Ollama is not running or model missing. Reverting to Exponential Backoff...`));
+                    }
+
                     keyRetryCount++;
                     if (keyRetryCount <= MAX_KEY_RETRIES) {
                         // Exponential backoff: 5s, then 10s, then 15s...
                         const delayMs = keyRetryCount * 5000;
-                        console.log(chalk.yellow(`\n[API Limits] ${reason}. Waiting ${delayMs / 1000}s before retrying...`));
+                        console.log(chalk.yellow(`\n[API Limits] Waiting ${delayMs / 1000}s before retrying...`));
                         await sleep(delayMs);
                         spinner.start(`Retrying (Attempt ${keyRetryCount}/${MAX_KEY_RETRIES})...`);
                         continue;
