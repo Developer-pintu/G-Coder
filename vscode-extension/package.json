@@ -1,14 +1,15 @@
 {
   "name": "g-coder-ghost",
   "displayName": "G-Coder Ghost",
-  "description": "A developer tool for IDE integration.",
-  "version": "1.0.0",
+  "description": "Live IDE IPC Bridge for the G-Coder Autonomous AI Suite. Provides real-time context streaming and IDE integration for the g-coder CLI.",
+  "version": "1.0.1",
   "publisher": "developer-pintu",
   "repository": {
     "type": "git",
     "url": "https://github.com/developer-pintu/g-coder.git"
   },
   "license": "MIT",
+  "icon": "icon.png",
   "engines": {
     "vscode": "^1.80.0"
   },
